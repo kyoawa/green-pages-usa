@@ -1,30 +1,68 @@
 import { NextResponse } from 'next/server'
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
+import { SSMClient, GetParameterCommand, PutParameterCommand } from '@aws-sdk/client-ssm'
 
-const STATES_FILE = path.join(process.cwd(), 'data', 'states.json')
+const client = new SSMClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
+
+const stateNames: { [key: string]: string } = {
+  'CA': 'California',
+  'MT': 'Montana', 
+  'IL': 'Illinois',
+  'MO': 'Missouri',
+  'OK': 'Oklahoma',
+  'NY': 'New York'
+}
 
 export async function POST(request: Request, { params }: { params: { code: string } }) {
   try {
     const { code } = params
     
-    const data = await readFile(STATES_FILE, 'utf8')
-    const states = JSON.parse(data)
-    
-    const stateIndex = states.findIndex(state => state.code === code)
-    if (stateIndex === -1) {
-      return NextResponse.json({ success: false, error: 'State not found' }, { status: 404 })
+    if (!stateNames[code]) {
+      return NextResponse.json({ success: false, error: 'Invalid state code' }, { status: 400 })
     }
     
-    states[stateIndex].active = !states[stateIndex].active
+    const parameterName = `/green-pages/states/${code}/active`
     
-    await writeFile(STATES_FILE, JSON.stringify(states, null, 2))
+    // Get current value
+    let currentValue = true // default to true if parameter doesn't exist
     
-    return NextResponse.json({ 
-      success: true, 
-      state: states[stateIndex] 
+    try {
+      const getCommand = new GetParameterCommand({ Name: parameterName })
+      const response = await client.send(getCommand)
+      currentValue = response.Parameter?.Value === 'true'
+    } catch (error) {
+      // Parameter doesn't exist yet, will create it with opposite of default
+      console.log(`Parameter ${parameterName} doesn't exist, creating it`)
+    }
+    
+    // Toggle the value
+    const newValue = !currentValue
+    
+    const putCommand = new PutParameterCommand({
+      Name: parameterName,
+      Value: newValue.toString(),
+      Type: 'String',
+      Overwrite: true,
+      Description: `Active status for ${stateNames[code]} state`
+    })
+    
+    await client.send(putCommand)
+    
+    return NextResponse.json({
+      success: true,
+      state: {
+        code,
+        name: stateNames[code],
+        active: newValue
+      }
     })
   } catch (error) {
+    console.error('Error toggling state:', error)
     return NextResponse.json({ success: false, error: 'Failed to toggle state' }, { status: 500 })
   }
 }

@@ -1,46 +1,70 @@
 import { NextResponse } from 'next/server'
-import { writeFile, readFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { SSMClient, GetParametersCommand, PutParameterCommand } from '@aws-sdk/client-ssm'
 
-const STATES_FILE = path.join(process.cwd(), 'data', 'states.json')
+const client = new SSMClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
 
-const defaultStates = [
-  { code: 'CA', name: 'California', active: true },
-  { code: 'MT', name: 'Montana', active: true },
-  { code: 'IL', name: 'Illinois', active: true },
-  { code: 'MO', name: 'Missouri', active: true },
-  { code: 'OK', name: 'Oklahoma', active: true },
-  { code: 'NY', name: 'New York', active: true }
+const states = [
+  { code: 'CA', name: 'California' },
+  { code: 'MT', name: 'Montana' },
+  { code: 'IL', name: 'Illinois' },
+  { code: 'MO', name: 'Missouri' },
+  { code: 'OK', name: 'Oklahoma' },
+  { code: 'NY', name: 'New York' }
 ]
-
-async function ensureStatesFile() {
-  try {
-    await readFile(STATES_FILE, 'utf8')
-  } catch (error) {
-    const dataDir = path.dirname(STATES_FILE)
-    await mkdir(dataDir, { recursive: true })
-    await writeFile(STATES_FILE, JSON.stringify(defaultStates, null, 2))
-  }
-}
 
 export async function GET() {
   try {
-    await ensureStatesFile()
-    const data = await readFile(STATES_FILE, 'utf8')
-    const states = JSON.parse(data)
-    return NextResponse.json(states)
+    const parameterNames = states.map(state => `/green-pages/states/${state.code}/active`)
+    
+    const command = new GetParametersCommand({
+      Names: parameterNames
+    })
+    
+    const response = await client.send(command)
+    const parameters = response.Parameters || []
+    
+    const statesWithStatus = states.map(state => {
+      const parameter = parameters.find(p => p.Name === `/green-pages/states/${state.code}/active`)
+      return {
+        ...state,
+        active: parameter?.Value === 'true'
+      }
+    })
+    
+    return NextResponse.json(statesWithStatus)
   } catch (error) {
+    console.error('Error fetching states:', error)
+    
+    // Return default active states if parameters don't exist yet
+    const defaultStates = states.map(state => ({ ...state, active: true }))
     return NextResponse.json(defaultStates)
   }
 }
 
 export async function PUT(request: Request) {
   try {
-    const states = await request.json()
-    await ensureStatesFile()
-    await writeFile(STATES_FILE, JSON.stringify(states, null, 2))
+    const statesData = await request.json()
+    
+    for (const state of statesData) {
+      const command = new PutParameterCommand({
+        Name: `/green-pages/states/${state.code}/active`,
+        Value: state.active.toString(),
+        Type: 'String',
+        Overwrite: true
+      })
+      
+      await client.send(command)
+    }
+    
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error('Error updating states:', error)
     return NextResponse.json({ success: false, error: 'Failed to update states' }, { status: 500 })
   }
 }
