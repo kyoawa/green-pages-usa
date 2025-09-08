@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head><title>Inventory Admin</title></head>
+<body>
+<h2>Update Inventory</h2>
+<form id="updateForm">
+  <select id="state">
+    <option value="CA">California</option>
+    <option value="IL">Illinois</option>
+    <option value="MO">Missouri</option>
+    <option value="OK">Oklahoma</option>
+    <option value="MT">Montana</option>
+    <option value="NY">New York</option>
+  </select>
+  
+  <select id="adType">
+    <option value="single">Single Listing</option>
+    <option value="quarter">Quarter Page</option>
+    <option value="half">Half Page</option>
+    <option value="full">Full Page</option>
+  </select>
+  
+  <input type="number" id="inventory" placeholder="New Inventory Count" required>
+  <button type="submit">Update</button>
+</form>
+
+<div id="result"></div>
+
+<script>
+document.getElementById('updateForm').onsubmit = async (e) => {
+  e.preventDefault()
+  const state = document.getElementById('state').value
+  const adType = document.getElementById('adType').value
+  const inventory = parseInt(document.getElementById('inventory').value)
+  
+  try {
+    const response = await fetch(`/api/admin/inventory/${state}/${adType}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({inventory})
+    })
+    const result = await response.json()
+    document.getElementById('result').innerHTML = JSON.stringify(result, null, 2)
+  } catch (error) {
+    document.getElementById('result').innerHTML = 'Error: ' + error.message
+  }
+}
+</script>
+</body>
+</html>
