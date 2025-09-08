@@ -33,7 +33,7 @@ export async function GET() {
       const parameter = parameters.find(p => p.Name === `/green-pages/states/${state.code}/active`)
       return {
         ...state,
-        active: parameter?.Value === 'true'
+        active: parameter?.Value === 'true' : true
       }
     })
     

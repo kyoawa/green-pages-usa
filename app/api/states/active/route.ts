@@ -25,7 +25,7 @@ export async function GET() {
     const activeStates = allStates.filter(state => {
       const parameter = parameters.find(p => p.Name === `/green-pages/states/${state}/active`)
       // Default to true if parameter doesn't exist
-      return parameter?.Value !== 'false'
+      return parameter?.Value === 'true' : true
     })
     
     return NextResponse.json(activeStates)
