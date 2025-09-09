@@ -4,6 +4,7 @@ import type React from "react"
 import { useEffect, useRef } from "react"
 import { useState } from "react"
 import { Facebook, Twitter, Instagram } from "lucide-react"
+import ActiveStates from "./components/ActiveStates"
 
 export default function USAAdvertisingPlatform() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -93,6 +94,7 @@ export default function USAAdvertisingPlatform() {
 
       {/* Main Content */}
       <main className="flex-1 p-6">
+        <ActiveStates />
         {currentStep === 0 && <LocationStep onStateSelect={setSelectedState} />}
         {currentStep === 1 && (
           <div className="max-w-6xl mx-auto">
@@ -206,7 +208,7 @@ function LocationStep({ onStateSelect }: { onStateSelect: (state: string) => voi
   useEffect(() => {
     const fetchActiveStates = async () => {
       try {
-        const response = await fetch('/api/states/active')
+        const response = await fetch('/api/states/active', { cache: 'no-store' })
         if (response.ok) {
           const states = await response.json()
           setActiveStates(states)

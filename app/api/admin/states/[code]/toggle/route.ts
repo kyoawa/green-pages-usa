@@ -1,60 +1,76 @@
-// app/api/states/active/route.ts
-export const runtime = 'nodejs'; // critical: avoid Edge runtime
+// app/api/admin/states/[code]/toggle/route.ts
+export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { SSMClient, GetParametersCommand, GetParametersByPathCommand } from '@aws-sdk/client-ssm';
+import { SSMClient, GetParameterCommand, PutParameterCommand } from '@aws-sdk/client-ssm';
 
 const REGION = process.env.AWS_REGION || 'us-west-2';
 
-// Option A: keep your explicit list (matches your current approach)
-const ALL_STATES = ['CA', 'MT', 'IL', 'MO', 'OK', 'NY'];
-
 const ssm = new SSMClient({
   region: REGION,
-  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      }
-    : undefined, // let default provider chain handle it if unset
+  credentials:
+    process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+      ? {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        }
+      : undefined,
 });
 
-export async function GET() {
+const stateNames: Record<string, string> = {
+  CA: 'California',
+  MT: 'Montana',
+  IL: 'Illinois',
+  MO: 'Missouri',
+  OK: 'Oklahoma',
+  NY: 'New York',
+};
+
+function paramName(code: string) {
+  return `/green-pages/states/${code}/active`;
+}
+
+export async function POST(req: Request, { params }: { params: { code: string } }) {
+  const code = (params.code || '').toUpperCase();
+  if (!stateNames[code]) {
+    return NextResponse.json({ success: false, error: `Unknown state code: ${code}` }, { status: 400 });
+  }
+
+  let desired: boolean | undefined;
   try {
-    // --- Option A: using GetParameters with explicit names ---
-    const Names = ALL_STATES.map(s => `/green-pages/states/${s}/active`);
-    const { Parameters = [] } = await ssm.send(
-      new GetParametersCommand({
-        Names,
-        WithDecryption: true,
+    if (req.headers.get('content-type')?.includes('application/json')) {
+      const body = await req.json().catch(() => ({}));
+      if (typeof body?.active === 'boolean') desired = body.active;
+    }
+  } catch { /* ignore */ }
+
+  const name = paramName(code);
+
+  try {
+    let current = true;
+    try {
+      const got = await ssm.send(new GetParameterCommand({ Name: name, WithDecryption: true }));
+      current = got.Parameter?.Value !== 'false';
+    } catch (e: any) {
+      if (e?.name !== 'ParameterNotFound') throw e;
+    }
+
+    const newValue = typeof desired === 'boolean' ? desired : !current;
+
+    await ssm.send(
+      new PutParameterCommand({
+        Name: name,
+        Type: 'String',
+        Value: newValue ? 'true' : 'false',
+        Overwrite: true,
       })
     );
 
-    const activeStates = ALL_STATES.filter(s => {
-      const p = Parameters.find(p => p.Name === `/green-pages/states/${s}/active`);
-      // default to true when missing or not "false"
-      return p?.Value !== 'false';
+    return NextResponse.json({
+      success: true,
+      state: { code, name: stateNames[code], active: newValue },
     });
-
-    return NextResponse.json(activeStates, { status: 200 });
-
-    // --- Option B (alternative): dynamic by path ---
-    // const out = await ssm.send(new GetParametersByPathCommand({
-    //   Path: '/green-pages/states/',
-    //   WithDecryption: true,
-    //   Recursive: true,
-    // }));
-    // const map = new Map(out.Parameters?.map(p => [p.Name!, p.Value]) ?? []);
-    // const active = [];
-    // for (const [name, value] of map) {
-    //   if (name.endsWith('/active') && value !== 'false') {
-    //     active.push(name.split('/')[3]); // /green-pages/states/{STATE}/active
-    //   }
-    // }
-    // return NextResponse.json(active, { status: 200 });
   } catch (err: any) {
-    console.error('Error fetching active states:', err);
-    // Safe fallback: treat all as active on error
-    return NextResponse.json(ALL_STATES, { status: 200 });
+    return NextResponse.json({ success: false, error: err?.message || 'Failed to toggle state' }, { status: 500 });
   }
 }
