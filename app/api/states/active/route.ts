@@ -1,51 +1,37 @@
-// app/api/states/active/route.ts
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+import { NextResponse } from 'next/server'
+import { SSMClient, GetParametersCommand } from '@aws-sdk/client-ssm'
 
-import { NextResponse } from 'next/server';
-import { SSMClient, GetParametersCommand } from '@aws-sdk/client-ssm';
+const client = new SSMClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
 
-const REGION = process.env.AWS_REGION || 'us-west-2';
-const ALL_STATES = ['CA', 'MT', 'IL', 'MO', 'OK', 'NY'];
-
-const ssm = new SSMClient({
-  region: REGION,
-  credentials:
-    process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      ? {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        }
-      : undefined,
-});
+const allStates = ['CA', 'MT', 'IL', 'MO', 'OK', 'NY']
 
 export async function GET() {
   try {
-    const Names = ALL_STATES.map((s) => `/green-pages/states/${s}/active`);
-    const { Parameters = [] } = await ssm.send(
-      new GetParametersCommand({ Names, WithDecryption: true })
-    );
-
-    const activeStates = ALL_STATES.filter((s) => {
-      const p = Parameters.find((p) => p.Name === `/green-pages/states/${s}/active`);
-      return p?.Value !== 'false'; // treat missing or anything else as active
-    });
-
-    return NextResponse.json(activeStates, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-        'CDN-Cache-Control': 'no-store',
-        'Vercel-CDN-Cache-Control': 'no-store',
-      },
-    });
-  } catch {
-    return NextResponse.json(ALL_STATES, {
-      headers: {
-        'Cache-Control': 'no-store',
-        'CDN-Cache-Control': 'no-store',
-        'Vercel-CDN-Cache-Control': 'no-store',
-      },
-    });
+    const parameterNames = allStates.map(state => `/green-pages/states/${state}/active`)
+    
+    const command = new GetParametersCommand({
+      Names: parameterNames
+    })
+    
+    const response = await client.send(command)
+    const parameters = response.Parameters || []
+    
+    const activeStates = allStates.filter(state => {
+      const parameter = parameters.find(p => p.Name === `/green-pages/states/${state}/active`)
+      // Default to true if parameter doesn't exist
+      return parameter?.Value !== 'false'
+    })
+    
+    return NextResponse.json(activeStates)
+  } catch (error) {
+    console.error('Error fetching active states:', error)
+    // Return all states as active if there's an error
+    return NextResponse.json(allStates)
   }
 }

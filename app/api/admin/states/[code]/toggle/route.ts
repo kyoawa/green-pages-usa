@@ -1,76 +1,68 @@
-// app/api/admin/states/[code]/toggle/route.ts
-export const runtime = 'nodejs';
+import { NextResponse } from 'next/server'
+import { SSMClient, GetParameterCommand, PutParameterCommand } from '@aws-sdk/client-ssm'
 
-import { NextResponse } from 'next/server';
-import { SSMClient, GetParameterCommand, PutParameterCommand } from '@aws-sdk/client-ssm';
+const client = new SSMClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
 
-const REGION = process.env.AWS_REGION || 'us-west-2';
-
-const ssm = new SSMClient({
-  region: REGION,
-  credentials:
-    process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      ? {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        }
-      : undefined,
-});
-
-const stateNames: Record<string, string> = {
-  CA: 'California',
-  MT: 'Montana',
-  IL: 'Illinois',
-  MO: 'Missouri',
-  OK: 'Oklahoma',
-  NY: 'New York',
-};
-
-function paramName(code: string) {
-  return `/green-pages/states/${code}/active`;
+const stateNames: { [key: string]: string } = {
+  'CA': 'California',
+  'MT': 'Montana', 
+  'IL': 'Illinois',
+  'MO': 'Missouri',
+  'OK': 'Oklahoma',
+  'NY': 'New York'
 }
 
-export async function POST(req: Request, { params }: { params: { code: string } }) {
-  const code = (params.code || '').toUpperCase();
-  if (!stateNames[code]) {
-    return NextResponse.json({ success: false, error: `Unknown state code: ${code}` }, { status: 400 });
-  }
-
-  let desired: boolean | undefined;
+export async function POST(request: Request, { params }: { params: { code: string } }) {
   try {
-    if (req.headers.get('content-type')?.includes('application/json')) {
-      const body = await req.json().catch(() => ({}));
-      if (typeof body?.active === 'boolean') desired = body.active;
+    const { code } = params
+    
+    if (!stateNames[code]) {
+      return NextResponse.json({ success: false, error: 'Invalid state code' }, { status: 400 })
     }
-  } catch { /* ignore */ }
-
-  const name = paramName(code);
-
-  try {
-    let current = true;
+    
+    const parameterName = `/green-pages/states/${code}/active`
+    
+    // Get current value
+    let currentValue = true // default to true if parameter doesn't exist
+    
     try {
-      const got = await ssm.send(new GetParameterCommand({ Name: name, WithDecryption: true }));
-      current = got.Parameter?.Value !== 'false';
-    } catch (e: any) {
-      if (e?.name !== 'ParameterNotFound') throw e;
+      const getCommand = new GetParameterCommand({ Name: parameterName })
+      const response = await client.send(getCommand)
+      currentValue = response.Parameter?.Value === 'true'
+    } catch (error) {
+      // Parameter doesn't exist yet, will create it with opposite of default
+      console.log(`Parameter ${parameterName} doesn't exist, creating it`)
     }
-
-    const newValue = typeof desired === 'boolean' ? desired : !current;
-
-    await ssm.send(
-      new PutParameterCommand({
-        Name: name,
-        Type: 'String',
-        Value: newValue ? 'true' : 'false',
-        Overwrite: true,
-      })
-    );
-
+    
+    // Toggle the value
+    const newValue = !currentValue
+    
+    const putCommand = new PutParameterCommand({
+      Name: parameterName,
+      Value: newValue.toString(),
+      Type: 'String',
+      Overwrite: true,
+      Description: `Active status for ${stateNames[code]} state`
+    })
+    
+    await client.send(putCommand)
+    
     return NextResponse.json({
       success: true,
-      state: { code, name: stateNames[code], active: newValue },
-    });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err?.message || 'Failed to toggle state' }, { status: 500 });
+      state: {
+        code,
+        name: stateNames[code],
+        active: newValue
+      }
+    })
+  } catch (error) {
+    console.error('Error toggling state:', error)
+    return NextResponse.json({ success: false, error: 'Failed to toggle state' }, { status: 500 })
   }
 }
