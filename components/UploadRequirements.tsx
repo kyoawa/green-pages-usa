@@ -61,7 +61,7 @@ const UploadRequirements = ({ onUploadSuccess, selectedAd, customerInfo }) => {
       // Automatically detect and include state
       const detectedState = getStateFromRoute();
       submitData.append('state', detectedState);
-      console.log('Auto-detected state:', detectedState); // For debugging
+      console.log('Auto-detected state:', detectedState);
       
       if (selectedAd) {
         submitData.append('selectedAd', JSON.stringify(selectedAd));
@@ -105,258 +105,170 @@ const UploadRequirements = ({ onUploadSuccess, selectedAd, customerInfo }) => {
 
   if (!customerInfo?.email) {
     return (
-      <div style={{ padding: '50px', textAlign: 'center', color: 'white', backgroundColor: 'black', minHeight: '100vh' }}>
-        <h1>Loading customer information...</h1>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <h1 className="text-xl">Loading customer information...</h1>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#000', color: '#fff', minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px' }}>
-        <div style={{ fontSize: '48px', fontWeight: 'bold' }}>
-          JISA <span style={{ color: '#4CAF50', fontStyle: 'italic' }}>Green Pages</span>
-        </div>
-        <nav style={{ display: 'flex', gap: '30px' }}>
-          <a href="#about" style={{ color: '#fff', textDecoration: 'none' }}>ABOUT</a>
-          <a href="#digital" style={{ color: '#fff', textDecoration: 'none' }}>DIGITAL</a>
-          <a href="#print" style={{ color: '#fff', textDecoration: 'none' }}>PRINT</a>
-          <a href="#contact" style={{ color: '#fff', textDecoration: 'none' }}>CONTACT</a>
-        </nav>
-      </div>
-
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-        <h1 style={{ textAlign: 'center', fontSize: '48px', fontWeight: 'bold', marginBottom: '50px' }}>
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-3xl mx-auto px-4 py-6 lg:px-8 lg:py-10">
+        <h1 className="text-3xl lg:text-5xl font-bold text-center mb-8 lg:mb-12">
           UPLOAD REQUIREMENTS
         </h1>
 
-        {/* Customer Info Display with State Detection */}
-        <div style={{ textAlign: 'center', marginBottom: '40px', padding: '20px', backgroundColor: '#333', borderRadius: '10px' }}>
-          <p style={{ color: '#4CAF50' }}>Customer: {customerInfo.fullName} ({customerInfo.email})</p>
-          <p style={{ color: '#4CAF50', fontSize: '14px', marginTop: '5px' }}>
-            State: {getStateFromRoute()} 
+        {/* Customer Info Display */}
+        <div className="bg-gray-900 rounded-lg p-4 mb-6 lg:mb-8">
+          <p className="text-green-400 text-sm lg:text-base">
+            Customer: {customerInfo.fullName} ({customerInfo.email})
+          </p>
+          <p className="text-green-400 text-xs lg:text-sm mt-1">
+            State: {getStateFromRoute()}
             {getStateFromRoute() === 'Unknown' && ' (Please contact support if this is incorrect)'}
           </p>
         </div>
 
         {/* 1/4 Page Advertorial Section */}
-        <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>1/4 PAGE ADVERTORIAL</h2>
+        <div className="mb-8 lg:mb-10">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">1/4 PAGE ADVERTORIAL</h2>
           
-          <div style={{ marginBottom: '20px' }}>
+          <div className="space-y-4">
             <input 
               type="text" 
               name="brandName"
               placeholder="Dispensary/Brand Name"
               value={formData.brandName}
               onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '12px 15px',
-                backgroundColor: '#4CAF50',
-                border: 'none',
-                borderRadius: '5px',
-                color: '#000',
-                fontSize: '16px'
-              }}
+              className="w-full p-3 lg:p-4 bg-green-600 text-black placeholder-green-900 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+              style={{ fontSize: '16px' }}
             />
-          </div>
 
-          {/* Document Upload */}
-          <div style={{ marginBottom: '20px' }}>
-            <div 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                backgroundColor: '#4CAF50', 
-                borderRadius: '5px', 
-                padding: '12px 15px', 
-                cursor: 'pointer' 
-              }}
-              onClick={() => document.getElementById('document-upload').click()}
-            >
-              <input 
-                type="file" 
-                id="document-upload"
-                accept=".txt,.docx,.pdf"
-                onChange={(e) => handleFileChange(e, 'documentFile')}
-                style={{ display: 'none' }}
-              />
-              <span style={{ color: '#000', fontSize: '16px', flex: 1 }}>
-                {formData.documentFile ? formData.documentFile.name : 'Document Upload: .TXT .DOCX .PDF'}
-              </span>
+            {/* Document Upload */}
+            <div>
+              <label className="block">
+                <div className="bg-green-600 rounded-md p-3 lg:p-4 cursor-pointer hover:bg-green-700 transition-colors">
+                  <input 
+                    type="file" 
+                    accept=".txt,.docx,.pdf"
+                    onChange={(e) => handleFileChange(e, 'documentFile')}
+                    className="hidden"
+                  />
+                  <span className="text-black text-base block truncate">
+                    {formData.documentFile ? formData.documentFile.name : 'Document Upload: .TXT .DOCX .PDF'}
+                  </span>
+                </div>
+              </label>
+              <p className="text-gray-400 text-xs lg:text-sm mt-1 ml-2">
+                Document Requirements: 50 - 60 Words
+              </p>
             </div>
-            <div style={{ color: '#ccc', fontSize: '14px', marginTop: '5px', marginLeft: '15px' }}>
-              Document Requirements: 50 - 60 Words
-            </div>
-          </div>
 
-          {/* Photo Upload */}
-          <div style={{ marginBottom: '20px' }}>
-            <div 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                backgroundColor: '#4CAF50', 
-                borderRadius: '5px', 
-                padding: '12px 15px', 
-                cursor: 'pointer' 
-              }}
-              onClick={() => document.getElementById('photo-upload').click()}
-            >
-              <input 
-                type="file" 
-                id="photo-upload"
-                accept=".jpeg,.jpg,.png,.tiff"
-                onChange={(e) => handleFileChange(e, 'photoFile')}
-                style={{ display: 'none' }}
-              />
-              <span style={{ color: '#000', fontSize: '16px', flex: 1 }}>
-                {formData.photoFile ? formData.photoFile.name : 'Photo Upload: .JPEG .PNG .TIFF'}
-              </span>
-            </div>
-            <div style={{ color: '#ccc', fontSize: '14px', marginTop: '5px', marginLeft: '15px' }}>
-              Photo Requirements: Landscape - min 1600px x 900px
+            {/* Photo Upload */}
+            <div>
+              <label className="block">
+                <div className="bg-green-600 rounded-md p-3 lg:p-4 cursor-pointer hover:bg-green-700 transition-colors">
+                  <input 
+                    type="file" 
+                    accept=".jpeg,.jpg,.png,.tiff"
+                    onChange={(e) => handleFileChange(e, 'photoFile')}
+                    className="hidden"
+                  />
+                  <span className="text-black text-base block truncate">
+                    {formData.photoFile ? formData.photoFile.name : 'Photo Upload: .JPEG .PNG .TIFF'}
+                  </span>
+                </div>
+              </label>
+              <p className="text-gray-400 text-xs lg:text-sm mt-1 ml-2">
+                Photo Requirements: Landscape - min 1600px x 900px
+              </p>
             </div>
           </div>
         </div>
 
         {/* Single Listing Section */}
-        <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>SINGLE LISTING</h2>
+        <div className="mb-8 lg:mb-10">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">SINGLE LISTING</h2>
           
-          <div style={{ marginBottom: '20px' }}>
+          <div className="space-y-4">
             <input 
               type="text" 
               name="dispensaryAddress"
               placeholder="Dispensary Address"
               value={formData.dispensaryAddress}
               onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '12px 15px',
-                backgroundColor: '#4CAF50',
-                border: 'none',
-                borderRadius: '5px',
-                color: '#000',
-                fontSize: '16px'
-              }}
+              className="w-full p-3 lg:p-4 bg-green-600 text-black placeholder-green-900 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+              style={{ fontSize: '16px' }}
             />
-          </div>
 
-          <div style={{ marginBottom: '20px' }}>
             <input 
               type="url" 
               name="webAddress"
               placeholder="Web Address"
               value={formData.webAddress}
               onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '12px 15px',
-                backgroundColor: '#4CAF50',
-                border: 'none',
-                borderRadius: '5px',
-                color: '#000',
-                fontSize: '16px'
-              }}
+              className="w-full p-3 lg:p-4 bg-green-600 text-black placeholder-green-900 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+              style={{ fontSize: '16px' }}
             />
-          </div>
 
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <input 
-              type="tel" 
-              name="phoneNumber"
-              placeholder="Phone Number"
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-              style={{
-                flex: 1,
-                padding: '12px 15px',
-                backgroundColor: '#4CAF50',
-                border: 'none',
-                borderRadius: '5px',
-                color: '#000',
-                fontSize: '16px'
-              }}
-            />
-            <input 
-              type="text" 
-              name="instagram"
-              placeholder="Instagram"
-              value={formData.instagram}
-              onChange={handleInputChange}
-              style={{
-                flex: 1,
-                padding: '12px 15px',
-                backgroundColor: '#4CAF50',
-                border: 'none',
-                borderRadius: '5px',
-                color: '#000',
-                fontSize: '16px'
-              }}
-            />
+            {/* Stack on mobile, side by side on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input 
+                type="tel" 
+                name="phoneNumber"
+                placeholder="Phone Number"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                className="p-3 lg:p-4 bg-green-600 text-black placeholder-green-900 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                style={{ fontSize: '16px' }}
+              />
+              <input 
+                type="text" 
+                name="instagram"
+                placeholder="Instagram"
+                value={formData.instagram}
+                onChange={handleInputChange}
+                className="p-3 lg:p-4 bg-green-600 text-black placeholder-green-900 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
           </div>
         </div>
 
         {/* Digital Listing Section */}
-        <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>DIGITAL LISTING</h2>
+        <div className="mb-8 lg:mb-10">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">DIGITAL LISTING</h2>
           
-          <div style={{ marginBottom: '20px' }}>
-            <div 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                backgroundColor: '#4CAF50', 
-                borderRadius: '5px', 
-                padding: '12px 15px', 
-                cursor: 'pointer' 
-              }}
-              onClick={() => document.getElementById('logo-upload').click()}
-            >
-              <input 
-                type="file" 
-                id="logo-upload"
-                accept=".eps,.ai"
-                onChange={(e) => handleFileChange(e, 'logoFile')}
-                style={{ display: 'none' }}
-              />
-              <span style={{ color: '#000', fontSize: '16px', flex: 1 }}>
-                {formData.logoFile ? formData.logoFile.name : 'Logo Upload: .EPS .AI'}
-              </span>
-            </div>
-            <div style={{ color: '#ccc', fontSize: '14px', marginTop: '5px', marginLeft: '15px' }}>
+          <div>
+            <label className="block">
+              <div className="bg-green-600 rounded-md p-3 lg:p-4 cursor-pointer hover:bg-green-700 transition-colors">
+                <input 
+                  type="file" 
+                  accept=".eps,.ai,.svg,.pdf"
+                  onChange={(e) => handleFileChange(e, 'logoFile')}
+                  className="hidden"
+                />
+                <span className="text-black text-base block truncate">
+                  {formData.logoFile ? formData.logoFile.name : 'Logo Upload: .EPS .AI .SVG .PDF'}
+                </span>
+              </div>
+            </label>
+            <p className="text-gray-400 text-xs lg:text-sm mt-1 ml-2">
               Logo Requirements: Vector File ONLY
-            </div>
+            </p>
           </div>
         </div>
 
         {/* Submit Button */}
-        <button 
-          onClick={handleSubmit} 
-          disabled={isSubmitting}
-          style={{
-            display: 'block',
-            width: '300px',
-            margin: '60px auto 0',
-            padding: '15px 0',
-            backgroundColor: isSubmitting ? '#666' : '#4CAF50',
-            color: '#000',
-            fontSize: '32px',
-            fontWeight: 'bold',
-            border: 'none',
-            borderRadius: '50px',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {isSubmitting ? 'UPLOADING...' : 'SUBMIT'}
-        </button>
-      </div>
-
-      <div style={{ padding: '40px', color: '#666', fontSize: '14px' }}>
-        PRESENTED BY CANNABIS NOW & LIONTEK MEDIA
+        <div className="flex justify-center mt-10 lg:mt-12">
+          <button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting}
+            className="w-full sm:w-auto px-12 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-black text-xl lg:text-2xl font-bold rounded-full transition-colors disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'UPLOADING...' : 'SUBMIT'}
+          </button>
+        </div>
       </div>
     </div>
   );
