@@ -23,6 +23,10 @@ interface Submission {
     photo: boolean
     logo: boolean
   }
+  // Add S3 URLs
+  documentUrl?: string
+  photoUrl?: string
+  logoUrl?: string
 }
 
 interface StateInfo {
@@ -77,7 +81,6 @@ export default function AdminSubmissions() {
       
       if (response.ok) {
         const result = await response.json()
-        // Update local state to reflect the change
         setStates(prevStates => 
           prevStates.map(state => 
             state.code === stateCode 
@@ -87,7 +90,11 @@ export default function AdminSubmissions() {
         )
         console.log(`State ${stateCode} toggled to: ${result.state.active ? 'ON' : 'OFF'}`)
       } else {
-        console.error('Failed to toggle state')
+        // If toggle fails, show Edge Config message
+        const data = await response.json()
+        if (data.message) {
+          alert(data.message)
+        }
       }
     } catch (error) {
       console.error('Error toggling state:', error)
@@ -104,26 +111,15 @@ export default function AdminSubmissions() {
     setExpandedStates(newExpanded)
   }
 
-  const downloadFile = async (submissionId: string, fileType: string) => {
-    try {
-      const response = await fetch(`/api/admin/download?id=${submissionId}&type=${fileType}`)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${submissionId}_${fileType}`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        alert('File not found or download failed')
-      }
-    } catch (error) {
-      console.error('Error downloading file:', error)
-      alert('Download failed')
-    }
+  // Direct download from S3 URLs
+  const downloadFile = (url: string, filename: string) => {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.target = '_blank' // Open in new tab for S3 URLs
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
   // Group submissions by state
@@ -361,9 +357,9 @@ export default function AdminSubmissions() {
                                 <div style={{ display: 'grid', gap: '8px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#374151', padding: '8px 12px', borderRadius: '4px' }}>
                                     <span style={{ color: '#fff', fontSize: '13px' }}>Document File</span>
-                                    {submission.hasFiles.document ? (
+                                    {submission.documentUrl ? (
                                       <button 
-                                        onClick={() => downloadFile(submission.id, 'document')}
+                                        onClick={() => downloadFile(submission.documentUrl!, `${submission.id}_document`)}
                                         style={{
                                           backgroundColor: '#22c55e',
                                           color: '#000',
@@ -384,9 +380,9 @@ export default function AdminSubmissions() {
                                   
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#374151', padding: '8px 12px', borderRadius: '4px' }}>
                                     <span style={{ color: '#fff', fontSize: '13px' }}>Photo File</span>
-                                    {submission.hasFiles.photo ? (
+                                    {submission.photoUrl ? (
                                       <button 
-                                        onClick={() => downloadFile(submission.id, 'photo')}
+                                        onClick={() => downloadFile(submission.photoUrl!, `${submission.id}_photo`)}
                                         style={{
                                           backgroundColor: '#22c55e',
                                           color: '#000',
@@ -407,9 +403,9 @@ export default function AdminSubmissions() {
                                   
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#374151', padding: '8px 12px', borderRadius: '4px' }}>
                                     <span style={{ color: '#fff', fontSize: '13px' }}>Logo File</span>
-                                    {submission.hasFiles.logo ? (
+                                    {submission.logoUrl ? (
                                       <button 
-                                        onClick={() => downloadFile(submission.id, 'logo')}
+                                        onClick={() => downloadFile(submission.logoUrl!, `${submission.id}_logo`)}
                                         style={{
                                           backgroundColor: '#22c55e',
                                           color: '#000',
