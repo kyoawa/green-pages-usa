@@ -122,6 +122,9 @@ importers:
       '@vercel/analytics':
         specifier: latest
         version: 1.5.0(@remix-run/react@2.17.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.2))(@sveltejs/kit@2.37.1(@sveltejs/vite-plugin-svelte@6.1.4(svelte@5.38.7)(vite@7.1.5(@types/node@22.18.1)(jiti@2.5.1)(lightningcss@1.30.1)))(svelte@5.38.7)(vite@7.1.5(@types/node@22.18.1)(jiti@2.5.1)(lightningcss@1.30.1)))(next@14.2.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(svelte@5.38.7)(vue-router@4.5.1(vue@3.5.21(typescript@5.9.2)))(vue@3.5.21(typescript@5.9.2))
+      '@vercel/edge-config':
+        specifier: ^1.4.0
+        version: 1.4.0
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.21(postcss@8.5.6)
@@ -1853,6 +1856,18 @@ packages:
       vue:
         optional: true
       vue-router:
+        optional: true
+
+  '@vercel/edge-config-fs@0.1.0':
+    resolution: {integrity: sha512-NRIBwfcS0bUoUbRWlNGetqjvLSwgYH/BqKqDN7vK1g32p7dN96k0712COgaz6VFizAm9b0g6IG6hR6+hc0KCPg==}
+
+  '@vercel/edge-config@1.4.0':
+    resolution: {integrity: sha512-69Wg5gw9DzwnyUmnjToSeLRm1nm8mCPgN0kflX8EHRHyqvzH80wPem5A8rI2LXPb2Y9tJNoqN3vXPcQhS2Wh5g==}
+    engines: {node: '>=14.6'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.7.0
+    peerDependenciesMeta:
+      '@opentelemetry/api':
         optional: true
 
   '@vue/compiler-core@3.5.21':
@@ -4740,6 +4755,12 @@ snapshots:
       svelte: 5.38.7
       vue: 3.5.21(typescript@5.9.2)
       vue-router: 4.5.1(vue@3.5.21(typescript@5.9.2))
+
+  '@vercel/edge-config-fs@0.1.0': {}
+
+  '@vercel/edge-config@1.4.0':
+    dependencies:
+      '@vercel/edge-config-fs': 0.1.0
 
   '@vue/compiler-core@3.5.21':
     dependencies:
