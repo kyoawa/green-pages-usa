@@ -208,7 +208,7 @@ function LocationStep({ onStateSelect }: { onStateSelect: (state: string) => voi
       try {
         const response = await fetch('/api/states/active')
         if (response.ok) {
-          const states = await response.json()
+          const data = await response.json()
           setActiveStates(data.states)
           console.log('Active states loaded:', data.states)
         } else {
