@@ -273,12 +273,12 @@ export function EnhancedCheckoutStep(props: CheckoutStepProps) {
     fetch("/api/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ 
-		  amount: (props.selectedAd.price + (props.selectedAd.price * 0.00)),
-		  state: getStateCode(props.state),  // ← Convert state name to code
-		  adType: props.selectedAd.id,
-		  adTitle: props.selectedAd.title
-		}),
+			body: JSON.stringify({ 
+			  amount: props.selectedAd.price * 1.08, // Match the UI
+			  state: getStateCode(props.state),
+			  adType: props.selectedAd.id,
+			  adTitle: props.selectedAd.title
+			}),
     })
       .then((res) => res.json())
       .then((data) => setClientSecret(data.clientSecret))
