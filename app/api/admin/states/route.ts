@@ -1,13 +1,5 @@
 import { NextResponse } from 'next/server'
-import { SSMClient, GetParametersCommand, PutParameterCommand } from '@aws-sdk/client-ssm'
-
-const client = new SSMClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-})
+import { get } from '@vercel/edge-config'
 
 const states = [
   { code: 'CA', name: 'California' },
@@ -20,51 +12,24 @@ const states = [
 
 export async function GET() {
   try {
-    const parameterNames = states.map(state => `/green-pages/states/${state.code}/active`)
+    const activeStates = await get('activeStates') || {}
     
-    const command = new GetParametersCommand({
-      Names: parameterNames
-    })
-    
-    const response = await client.send(command)
-    const parameters = response.Parameters || []
-    
-    const statesWithStatus = states.map(state => {
-      const parameter = parameters.find(p => p.Name === `/green-pages/states/${state.code}/active`)
-      return {
-        ...state,
-        active: parameter?.Value === 'true'
-      }
-    })
+    const statesWithStatus = states.map(state => ({
+      ...state,
+      active: activeStates[state.code] !== false // Default to true
+    }))
     
     return NextResponse.json(statesWithStatus)
   } catch (error) {
     console.error('Error fetching states:', error)
-    
-    // Return default active states if parameters don't exist yet
     const defaultStates = states.map(state => ({ ...state, active: true }))
     return NextResponse.json(defaultStates)
   }
 }
 
-export async function PUT(request: Request) {
-  try {
-    const statesData = await request.json()
-    
-    for (const state of statesData) {
-      const command = new PutParameterCommand({
-        Name: `/green-pages/states/${state.code}/active`,
-        Value: state.active.toString(),
-        Type: 'String',
-        Overwrite: true
-      })
-      
-      await client.send(command)
-    }
-    
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error updating states:', error)
-    return NextResponse.json({ success: false, error: 'Failed to update states' }, { status: 500 })
-  }
+// This PUT endpoint is optional - your toggle route handles individual updates
+export async function PUT(request) {
+  return NextResponse.json({ 
+    message: 'Use individual toggle endpoints' 
+  }, { status: 501 })
 }

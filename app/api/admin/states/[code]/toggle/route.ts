@@ -1,15 +1,7 @@
 import { NextResponse } from 'next/server'
-import { SSMClient, GetParameterCommand, PutParameterCommand } from '@aws-sdk/client-ssm'
+import { get } from '@vercel/edge-config'
 
-const client = new SSMClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-})
-
-const stateNames: { [key: string]: string } = {
+const stateNames = {
   'CA': 'California',
   'MT': 'Montana', 
   'IL': 'Illinois',
@@ -18,40 +10,51 @@ const stateNames: { [key: string]: string } = {
   'NY': 'New York'
 }
 
-export async function POST(request: Request, { params }: { params: { code: string } }) {
+export async function POST(request, { params }) {
   try {
     const { code } = params
     
     if (!stateNames[code]) {
-      return NextResponse.json({ success: false, error: 'Invalid state code' }, { status: 400 })
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid state code' 
+      }, { status: 400 })
     }
     
-    const parameterName = `/green-pages/states/${code}/active`
-    
-    // Get current value
-    let currentValue = true // default to true if parameter doesn't exist
-    
-    try {
-      const getCommand = new GetParameterCommand({ Name: parameterName })
-      const response = await client.send(getCommand)
-      currentValue = response.Parameter?.Value === 'true'
-    } catch (error) {
-      // Parameter doesn't exist yet, will create it with opposite of default
-      console.log(`Parameter ${parameterName} doesn't exist, creating it`)
-    }
-    
-    // Toggle the value
+    // Get current states
+    const activeStates = await get('activeStates') || {}
+    const currentValue = activeStates[code] !== false
     const newValue = !currentValue
     
-    const putCommand = new PutParameterCommand({
-      Name: parameterName,
-      Value: newValue.toString(),
-      Type: 'String',
-      Overwrite: true,
-      Description: `Active status for ${stateNames[code]} state`
-    })
+    // Update Edge Config
+    const updateStates = {
+      ...activeStates,
+      [code]: newValue
+    }
     
-    await client.send(putCommand)
+    const response = await fetch(
+      `https://api.vercel.com/v1/edge-config/${process.env.EDGE_CONFIG_ID}/items`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${process.env.VERCEL_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [{
+            operation: 'update',
+            key: 'activeStates',
+            value: updateStates
+          }]
+        })
+      }
+    )
+    
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Vercel API error:', error)
+      throw new Error('Failed to update Edge Config')
+    }
     
     return NextResponse.json({
       success: true,
@@ -63,6 +66,9 @@ export async function POST(request: Request, { params }: { params: { code: strin
     })
   } catch (error) {
     console.error('Error toggling state:', error)
-    return NextResponse.json({ success: false, error: 'Failed to toggle state' }, { status: 500 })
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to toggle state' 
+    }, { status: 500 })
   }
 }
