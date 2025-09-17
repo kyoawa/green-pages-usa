@@ -1,3 +1,4 @@
+// app/[state]/page.tsx - Updated with all 50 states
 "use client"
 
 import { useState, useEffect } from "react"
@@ -16,6 +17,87 @@ interface AdData {
   total_slots: number
 }
 
+// Complete mapping for all 50 states
+const STATE_MAPPING: { [key: string]: { code: string, name: string } } = {
+  'alabama': { code: 'AL', name: 'Alabama' },
+  'alaska': { code: 'AK', name: 'Alaska' },
+  'arizona': { code: 'AZ', name: 'Arizona' },
+  'arkansas': { code: 'AR', name: 'Arkansas' },
+  'california': { code: 'CA', name: 'California' },
+  'colorado': { code: 'CO', name: 'Colorado' },
+  'connecticut': { code: 'CT', name: 'Connecticut' },
+  'delaware': { code: 'DE', name: 'Delaware' },
+  'florida': { code: 'FL', name: 'Florida' },
+  'georgia': { code: 'GA', name: 'Georgia' },
+  'hawaii': { code: 'HI', name: 'Hawaii' },
+  'idaho': { code: 'ID', name: 'Idaho' },
+  'illinois': { code: 'IL', name: 'Illinois' },
+  'indiana': { code: 'IN', name: 'Indiana' },
+  'iowa': { code: 'IA', name: 'Iowa' },
+  'kansas': { code: 'KS', name: 'Kansas' },
+  'kentucky': { code: 'KY', name: 'Kentucky' },
+  'louisiana': { code: 'LA', name: 'Louisiana' },
+  'maine': { code: 'ME', name: 'Maine' },
+  'maryland': { code: 'MD', name: 'Maryland' },
+  'massachusetts': { code: 'MA', name: 'Massachusetts' },
+  'michigan': { code: 'MI', name: 'Michigan' },
+  'minnesota': { code: 'MN', name: 'Minnesota' },
+  'mississippi': { code: 'MS', name: 'Mississippi' },
+  'missouri': { code: 'MO', name: 'Missouri' },
+  'montana': { code: 'MT', name: 'Montana' },
+  'nebraska': { code: 'NE', name: 'Nebraska' },
+  'nevada': { code: 'NV', name: 'Nevada' },
+  'newhampshire': { code: 'NH', name: 'New Hampshire' },
+  'new-hampshire': { code: 'NH', name: 'New Hampshire' },
+  'newjersey': { code: 'NJ', name: 'New Jersey' },
+  'new-jersey': { code: 'NJ', name: 'New Jersey' },
+  'newmexico': { code: 'NM', name: 'New Mexico' },
+  'new-mexico': { code: 'NM', name: 'New Mexico' },
+  'newyork': { code: 'NY', name: 'New York' },
+  'new-york': { code: 'NY', name: 'New York' },
+  'northcarolina': { code: 'NC', name: 'North Carolina' },
+  'north-carolina': { code: 'NC', name: 'North Carolina' },
+  'northdakota': { code: 'ND', name: 'North Dakota' },
+  'north-dakota': { code: 'ND', name: 'North Dakota' },
+  'ohio': { code: 'OH', name: 'Ohio' },
+  'oklahoma': { code: 'OK', name: 'Oklahoma' },
+  'oregon': { code: 'OR', name: 'Oregon' },
+  'pennsylvania': { code: 'PA', name: 'Pennsylvania' },
+  'rhodeisland': { code: 'RI', name: 'Rhode Island' },
+  'rhode-island': { code: 'RI', name: 'Rhode Island' },
+  'southcarolina': { code: 'SC', name: 'South Carolina' },
+  'south-carolina': { code: 'SC', name: 'South Carolina' },
+  'southdakota': { code: 'SD', name: 'South Dakota' },
+  'south-dakota': { code: 'SD', name: 'South Dakota' },
+  'tennessee': { code: 'TN', name: 'Tennessee' },
+  'texas': { code: 'TX', name: 'Texas' },
+  'utah': { code: 'UT', name: 'Utah' },
+  'vermont': { code: 'VT', name: 'Vermont' },
+  'virginia': { code: 'VA', name: 'Virginia' },
+  'washington': { code: 'WA', name: 'Washington' },
+  'westvirginia': { code: 'WV', name: 'West Virginia' },
+  'west-virginia': { code: 'WV', name: 'West Virginia' },
+  'wisconsin': { code: 'WI', name: 'Wisconsin' },
+  'wyoming': { code: 'WY', name: 'Wyoming' }
+}
+
+// State codes to names mapping
+const STATE_CODES: { [key: string]: string } = {
+  'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+  'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+  'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+  'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+  'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+  'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+  'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+  'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+  'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+  'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+  'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+  'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+  'WI': 'Wisconsin', 'WY': 'Wyoming'
+}
+
 export default function DynamicStatePage() {
   const params = useParams()
   const router = useRouter()
@@ -25,6 +107,7 @@ export default function DynamicStatePage() {
   const [selectedAd, setSelectedAd] = useState<AdData | null>(null)
   const [inventory, setInventory] = useState<AdData[]>([])
   const [loading, setLoading] = useState(true)
+  const [stateActive, setStateActive] = useState(true)
   const [paymentProcessing, setPaymentProcessing] = useState(false)
   const [customerInfo, setCustomerInfo] = useState<{email: string, fullName: string, phone: string} | null>(null)
   
@@ -32,52 +115,44 @@ export default function DynamicStatePage() {
 
   // Convert URL parameter to state info
   const getStateInfo = (urlParam: string) => {
-    const stateMap: { [key: string]: { code: string, name: string } } = {
-      'california': { code: 'CA', name: 'California' },
-      'illinois': { code: 'IL', name: 'Illinois' },
-      'missouri': { code: 'MO', name: 'Missouri' },
-      'montana': { code: 'MT', name: 'Montana' },
-      'newyork': { code: 'NY', name: 'New York' },
-      'new-york': { code: 'NY', name: 'New York' },
-      'oklahoma': { code: 'OK', name: 'Oklahoma' },
-      'texas': { code: 'TX', name: 'Texas' },
-      'florida': { code: 'FL', name: 'Florida' },
-      'washington': { code: 'WA', name: 'Washington' },
-      'oregon': { code: 'OR', name: 'Oregon' },
-      'nevada': { code: 'NV', name: 'Nevada' },
-      'arizona': { code: 'AZ', name: 'Arizona' },
-      'colorado': { code: 'CO', name: 'Colorado' },
-      'utah': { code: 'UT', name: 'Utah' },
-      'newmexico': { code: 'NM', name: 'New Mexico' }
-    }
-    
+    // Check if it's a 2-letter state code
     if (urlParam.length === 2) {
       const code = urlParam.toUpperCase()
-      return { code, name: getStateName(code) }
+      return { code, name: STATE_CODES[code] || urlParam }
     }
     
-    return stateMap[urlParam.toLowerCase()] || { code: urlParam.toUpperCase(), name: urlParam }
-  }
-
-  const getStateName = (code: string) => {
-    const stateNames: { [key: string]: string } = {
-      'CA': 'California', 'IL': 'Illinois', 'MO': 'Missouri', 
-      'MT': 'Montana', 'NY': 'New York', 'OK': 'Oklahoma',
-      'TX': 'Texas', 'FL': 'Florida', 'WA': 'Washington',
-      'OR': 'Oregon', 'NV': 'Nevada', 'AZ': 'Arizona',
-      'CO': 'Colorado', 'UT': 'Utah', 'NM': 'New Mexico'
+    // Otherwise look up in the mapping
+    return STATE_MAPPING[urlParam.toLowerCase()] || { 
+      code: urlParam.toUpperCase().substring(0, 2), 
+      name: urlParam 
     }
-    return stateNames[code] || code
   }
 
   const stateInfo = getStateInfo(stateParam)
   const stateCode = stateInfo.code
   const stateName = stateInfo.name
 
-  // Fetch inventory for this state
+  // Check if state is active and fetch inventory
   useEffect(() => {
+    checkStateActive()
     fetchInventory()
   }, [stateCode])
+
+  const checkStateActive = async () => {
+    try {
+      const response = await fetch('/api/states/active')
+      if (response.ok) {
+        const activeStates = await response.json()
+        const isActive = activeStates.some((s: any) => s.code === stateCode)
+        
+        if (!isActive) {
+          setStateActive(false)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking state status:', error)
+    }
+  }
 
   const fetchInventory = async () => {
     try {
@@ -86,12 +161,7 @@ export default function DynamicStatePage() {
       if (response.ok) {
         const data = await response.json()
         setInventory(data)
-      } else if (response.status === 404) {
-        alert(`${stateName} is not currently available. Redirecting to home page.`)
-        router.push('/')
-        return
       } else {
-        console.error('Failed to fetch inventory')
         setInventory([])
       }
     } catch (error) {
@@ -123,12 +193,9 @@ export default function DynamicStatePage() {
       if (response.ok) {
         await fetchInventory()
         setCurrentStep(2)
-      } else {
-        alert('Payment succeeded but there was an issue updating inventory. Please contact support.')
       }
     } catch (error) {
       console.error('Error confirming payment:', error)
-      alert('There was an issue processing your payment. Please contact support.')
     } finally {
       setPaymentProcessing(false)
     }
@@ -138,23 +205,17 @@ export default function DynamicStatePage() {
     setCurrentStep(3)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-green-400 mx-auto mb-4" />
-          <div className="text-white text-xl">Loading {stateName} advertising options...</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (inventory.length === 0) {
+  // If state is not active, show message
+  if (!stateActive || (!loading && inventory.length === 0)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-center text-white">
-          <h1 className="text-2xl font-bold mb-4">No ads available for {stateName}</h1>
-          <p className="text-gray-400 mb-4">This state may not be active yet.</p>
+          <h1 className="text-2xl font-bold mb-4">
+            {!stateActive ? `${stateName} is not currently available` : `No ads available for ${stateName}`}
+          </h1>
+          <p className="text-gray-400 mb-4">
+            {!stateActive ? 'This state has not been activated yet.' : 'Please check back later or contact support.'}
+          </p>
           <button
             onClick={() => router.push('/')}
             className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded"
@@ -166,102 +227,6 @@ export default function DynamicStatePage() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="flex items-center justify-between p-6 border-b border-gray-800">
-        <div className="flex items-center space-x-2">
-          <img
-            src="/logo.svg"
-            alt="Green Pages"
-            className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => router.push('/')}
-          />
-        </div>
-        <nav className="flex space-x-8">
-          <a href="#" className="text-gray-300 hover:text-white">ABOUT</a>
-          <a href="#" className="text-gray-300 hover:text-white">DIGITAL</a>
-          <a href="#" className="text-gray-300 hover:text-white">PRINT</a>
-          <a href="#" className="text-gray-300 hover:text-white">CONTACT</a>
-        </nav>
-      </header>
-
-      {/* Progress Bar */}
-      <div className="bg-gray-900 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between text-sm">
-            {steps.map((step, index) => (
-              <div
-                key={index}
-                className={`flex items-center ${
-                  index <= currentStep ? "text-green-400" : "text-gray-500"
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mr-3 ${
-                    index <= currentStep
-                      ? "border-green-400 bg-green-400 text-black"
-                      : "border-gray-500"
-                  }`}
-                >
-                  {index + 1}
-                </div>
-                {step.toUpperCase()}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        {currentStep === 0 && (
-          <AdSelectionStep
-            onAdSelect={handleAdSelect}
-            state={stateName}
-            stateCode={stateCode}
-            inventory={inventory}
-            loading={loading}
-            onRefresh={fetchInventory}
-          />
-        )}
-
-        {currentStep === 1 && selectedAd && (
-          <EnhancedCheckoutStep 
-            onPaymentSuccess={handlePaymentSuccess}
-            state={stateName} 
-            selectedAd={selectedAd}
-            paymentProcessing={paymentProcessing}
-          />
-        )}
-
-        {currentStep === 2 && (
-          <UploadRequirements 
-            onUploadSuccess={handleUploadSuccess}
-            selectedAd={selectedAd}
-            customerInfo={customerInfo}
-          />
-        )}
-
-        {currentStep === 3 && (
-          <OrderSummaryStep state={stateName} selectedAd={selectedAd} />
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="p-6 border-t border-gray-800">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-400">PRESENTED BY CANNABIS NOW & LIONTEK MEDIA</div>
-          <div className="flex space-x-4">
-            <Facebook className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
-            <Twitter className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
-            <Instagram className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
-          </div>
-        </div>
-      </footer>
-    </div>
-  )
-}
 
 // AdSelectionStep component
 function AdSelectionStep({
