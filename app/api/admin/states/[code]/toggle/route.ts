@@ -1,25 +1,13 @@
+// app/api/admin/states/[code]/toggle/route.ts
 import { NextResponse } from 'next/server'
 import { get } from '@vercel/edge-config'
 
-const stateNames = {
-  'CA': 'California',
-  'MT': 'Montana', 
-  'IL': 'Illinois',
-  'MO': 'Missouri',
-  'OK': 'Oklahoma',
-  'NY': 'New York'
-}
-
-export async function POST(request, { params }) {
+export async function POST(request: Request, { params }: { params: { code: string } }) {
   try {
     const { code } = params
     
-    if (!stateNames[code]) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid state code' 
-      }, { status: 400 })
-    }
+    // Don't validate state code - accept any state
+    // This allows newly added states to work
     
     // Get current states
     const activeStates = await get('activeStates') || {}
@@ -56,11 +44,15 @@ export async function POST(request, { params }) {
       throw new Error('Failed to update Edge Config')
     }
     
+    // Also get the state name from statesList if available
+    const statesList = await get('statesList') || []
+    const stateInfo = statesList.find((s: any) => s.code === code)
+    
     return NextResponse.json({
       success: true,
       state: {
         code,
-        name: stateNames[code],
+        name: stateInfo?.name || code,
         active: newValue
       }
     })

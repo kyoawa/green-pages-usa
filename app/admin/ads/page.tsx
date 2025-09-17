@@ -26,14 +26,10 @@ interface NewAdForm {
   description: string
 }
 
-const states = [
-  { code: 'CA', name: 'California' },
-  { code: 'MT', name: 'Montana' },
-  { code: 'IL', name: 'Illinois' },
-  { code: 'MO', name: 'Missouri' },
-  { code: 'OK', name: 'Oklahoma' },
-  { code: 'NY', name: 'New York' }
-]
+interface StateInfo {
+  code: string
+  name: string
+}
 
 const adTypes = [
   { value: 'single', label: 'Single Listing' },
@@ -54,6 +50,10 @@ export default function AdminAdsPage() {
   const [editForm, setEditForm] = useState<Partial<Ad>>({})
   const [showNewAdForm, setShowNewAdForm] = useState(false)
   const [expandedStates, setExpandedStates] = useState<Set<string>>(new Set(['CA']))
+  
+  // Dynamic states fetched from API
+  const [states, setStates] = useState<StateInfo[]>([])
+  
   const [newAdForm, setNewAdForm] = useState<NewAdForm>({
     state: 'CA',
     adType: 'single',
@@ -65,8 +65,39 @@ export default function AdminAdsPage() {
   })
 
   useEffect(() => {
+    fetchStates()
     fetchAds()
   }, [])
+
+  const fetchStates = async () => {
+    try {
+      const response = await fetch('/api/admin/states')
+      if (response.ok) {
+        const data = await response.json()
+        const formattedStates = data.map((s: any) => ({
+          code: s.code,
+          name: s.name || s.code
+        }))
+        setStates(formattedStates)
+        
+        // Update default state in form if we have states
+        if (formattedStates.length > 0 && !formattedStates.find((s: StateInfo) => s.code === newAdForm.state)) {
+          setNewAdForm(prev => ({ ...prev, state: formattedStates[0].code }))
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching states:', error)
+      // Fallback to some defaults if API fails
+      setStates([
+        { code: 'CA', name: 'California' },
+        { code: 'MT', name: 'Montana' },
+        { code: 'IL', name: 'Illinois' },
+        { code: 'MO', name: 'Missouri' },
+        { code: 'OK', name: 'Oklahoma' },
+        { code: 'NY', name: 'New York' }
+      ])
+    }
+  }
 
   const fetchAds = async () => {
     try {
@@ -111,7 +142,7 @@ export default function AdminAdsPage() {
         await fetchAds()
         setShowNewAdForm(false)
         setNewAdForm({
-          state: 'CA',
+          state: states[0]?.code || 'CA',
           adType: 'single',
           title: '',
           price: 0,
@@ -255,7 +286,9 @@ export default function AdminAdsPage() {
                   style={{ width: '100%', padding: '8px', borderRadius: '4px', backgroundColor: '#111827', border: '1px solid #374151', color: '#fff' }}
                 >
                   {states.map(state => (
-                    <option key={state.code} value={state.code}>{state.name}</option>
+                    <option key={state.code} value={state.code}>
+                      {state.name} ({state.code})
+                    </option>
                   ))}
                 </select>
               </div>
