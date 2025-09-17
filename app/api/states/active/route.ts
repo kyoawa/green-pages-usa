@@ -1,28 +1,26 @@
-import { get } from '@vercel/edge-config'
 import { NextResponse } from 'next/server'
+import { InventoryDB } from '@/lib/dynamodb'
 
-export const runtime = 'edge'
-
+// GET: Fetch active states for public display
 export async function GET() {
+  const db = new InventoryDB()
+  
   try {
-    const activeStates = await get('activeStates')
-    
-    const statesArray = Object.entries(activeStates || {})
-      .filter(([_, isActive]) => isActive)
-      .map(([state]) => state)
-    
-    return NextResponse.json({ 
-      states: statesArray,
-      statesObject: activeStates 
-    })
+    const activeStates = await db.getActiveStates()
+    return NextResponse.json(activeStates)
   } catch (error) {
-    console.error('Error fetching states:', error)
-    return NextResponse.json({ 
-      states: ['CA', 'IL', 'MO', 'MT', 'NY', 'OK'],
-      statesObject: {
-        CA: true, IL: true, MO: true, 
-        MT: true, NY: true, OK: true
-      }
-    })
+    console.error('Error fetching active states:', error)
+    
+    // Fallback to default states if database fails
+    const fallbackStates = [
+      { code: 'CA', name: 'California' },
+      { code: 'IL', name: 'Illinois' },
+      { code: 'MO', name: 'Missouri' },
+      { code: 'MT', name: 'Montana' },
+      { code: 'NY', name: 'New York' },
+      { code: 'OK', name: 'Oklahoma' }
+    ]
+    
+    return NextResponse.json(fallbackStates)
   }
 }
