@@ -1,28 +1,50 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
-import { InventoryDB } from '@/lib/dynamodb'
+import { get } from '@vercel/edge-config'
 
-// GET: Fetch active states for public display
 export async function GET() {
-  const db = new InventoryDB()
-  
   try {
-    const activeStates = await db.getActiveStates()
-    return NextResponse.json(activeStates)
+    // Get your activeStates from Edge Config (exactly what you have in the screenshot)
+    const activeStates = await get('activeStates') || {}
+    
+    // Convert to array format for your frontend
+    const statesList = []
+    
+    const stateNames: Record<string, string> = {
+      'CA': 'California',
+      'IL': 'Illinois',
+      'MO': 'Missouri',
+      'MT': 'Montana',
+      'NY': 'New York',
+      'OK': 'Oklahoma',
+      'AL': 'Alabama',
+      'HI': 'Hawaii',
+      'GA': 'Georgia'
+    }
+    
+    // Build array of active states only
+    for (const [code, isActive] of Object.entries(activeStates)) {
+      if (isActive === true) {
+        statesList.push({
+          code: code,
+          name: stateNames[code] || code
+        })
+      }
+    }
+    
+    return NextResponse.json(statesList)
+    
   } catch (error) {
-    console.error('Error fetching active states:', error)
+    console.error('Error fetching active states from Edge Config:', error)
     
-    // Fallback to default states if database fails
-    const fallbackStates = [
+    // Fallback if Edge Config fails
+    return NextResponse.json([
       { code: 'CA', name: 'California' },
-      { code: 'IL', name: 'Illinois' },
-      { code: 'MO', name: 'Missouri' },
       { code: 'MT', name: 'Montana' },
-      { code: 'NY', name: 'New York' },
-      { code: 'OK', name: 'Oklahoma' }
-    ]
-    
-    return NextResponse.json(fallbackStates)
+      { code: 'AL', name: 'Alabama' },
+      { code: 'HI', name: 'Hawaii' },
+      { code: 'GA', name: 'Georgia' }
+    ])
   }
 }
