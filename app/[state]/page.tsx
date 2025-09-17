@@ -1,4 +1,4 @@
-// app/[state]/page.tsx - Updated with all 50 states
+// app/[state]/page.tsx - Complete file
 "use client"
 
 import { useState, useEffect } from "react"
@@ -107,7 +107,6 @@ export default function DynamicStatePage() {
   const [selectedAd, setSelectedAd] = useState<AdData | null>(null)
   const [inventory, setInventory] = useState<AdData[]>([])
   const [loading, setLoading] = useState(true)
-  const [stateActive, setStateActive] = useState(true)
   const [paymentProcessing, setPaymentProcessing] = useState(false)
   const [customerInfo, setCustomerInfo] = useState<{email: string, fullName: string, phone: string} | null>(null)
   
@@ -132,27 +131,10 @@ export default function DynamicStatePage() {
   const stateCode = stateInfo.code
   const stateName = stateInfo.name
 
-  // Check if state is active and fetch inventory
+  // Fetch inventory for this state
   useEffect(() => {
-    checkStateActive()
     fetchInventory()
   }, [stateCode])
-
-  const checkStateActive = async () => {
-    try {
-      const response = await fetch('/api/states/active')
-      if (response.ok) {
-        const activeStates = await response.json()
-        const isActive = activeStates.some((s: any) => s.code === stateCode)
-        
-        if (!isActive) {
-          setStateActive(false)
-        }
-      }
-    } catch (error) {
-      console.error('Error checking state status:', error)
-    }
-  }
 
   const fetchInventory = async () => {
     try {
@@ -161,7 +143,12 @@ export default function DynamicStatePage() {
       if (response.ok) {
         const data = await response.json()
         setInventory(data)
+      } else if (response.status === 404) {
+        alert(`${stateName} is not currently available. Redirecting to home page.`)
+        router.push('/')
+        return
       } else {
+        console.error('Failed to fetch inventory')
         setInventory([])
       }
     } catch (error) {
@@ -193,9 +180,12 @@ export default function DynamicStatePage() {
       if (response.ok) {
         await fetchInventory()
         setCurrentStep(2)
+      } else {
+        alert('Payment succeeded but there was an issue updating inventory. Please contact support.')
       }
     } catch (error) {
       console.error('Error confirming payment:', error)
+      alert('There was an issue processing your payment. Please contact support.')
     } finally {
       setPaymentProcessing(false)
     }
@@ -205,17 +195,23 @@ export default function DynamicStatePage() {
     setCurrentStep(3)
   }
 
-  // If state is not active, show message
-  if (!stateActive || (!loading && inventory.length === 0)) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-green-400 mx-auto mb-4" />
+          <div className="text-white text-xl">Loading {stateName} advertising options...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (inventory.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-center text-white">
-          <h1 className="text-2xl font-bold mb-4">
-            {!stateActive ? `${stateName} is not currently available` : `No ads available for ${stateName}`}
-          </h1>
-          <p className="text-gray-400 mb-4">
-            {!stateActive ? 'This state has not been activated yet.' : 'Please check back later or contact support.'}
-          </p>
+          <h1 className="text-2xl font-bold mb-4">No ads available for {stateName}</h1>
+          <p className="text-gray-400 mb-4">This state may not be active yet.</p>
           <button
             onClick={() => router.push('/')}
             className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded"
@@ -227,6 +223,102 @@ export default function DynamicStatePage() {
     )
   }
 
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="flex items-center justify-between p-6 border-b border-gray-800">
+        <div className="flex items-center space-x-2">
+          <img
+            src="/logo.svg"
+            alt="Green Pages"
+            className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => router.push('/')}
+          />
+        </div>
+        <nav className="flex space-x-8">
+          <a href="#" className="text-gray-300 hover:text-white">ABOUT</a>
+          <a href="#" className="text-gray-300 hover:text-white">DIGITAL</a>
+          <a href="#" className="text-gray-300 hover:text-white">PRINT</a>
+          <a href="#" className="text-gray-300 hover:text-white">CONTACT</a>
+        </nav>
+      </header>
+
+      {/* Progress Bar */}
+      <div className="bg-gray-900 px-6 py-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between text-sm">
+            {steps.map((step, index) => (
+              <div
+                key={index}
+                className={`flex items-center ${
+                  index <= currentStep ? "text-green-400" : "text-gray-500"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mr-3 ${
+                    index <= currentStep
+                      ? "border-green-400 bg-green-400 text-black"
+                      : "border-gray-500"
+                  }`}
+                >
+                  {index + 1}
+                </div>
+                {step.toUpperCase()}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6">
+        {currentStep === 0 && (
+          <AdSelectionStep
+            onAdSelect={handleAdSelect}
+            state={stateName}
+            stateCode={stateCode}
+            inventory={inventory}
+            loading={loading}
+            onRefresh={fetchInventory}
+          />
+        )}
+
+        {currentStep === 1 && selectedAd && (
+          <EnhancedCheckoutStep 
+            onPaymentSuccess={handlePaymentSuccess}
+            state={stateName} 
+            selectedAd={selectedAd}
+            paymentProcessing={paymentProcessing}
+          />
+        )}
+
+        {currentStep === 2 && (
+          <UploadRequirements 
+            onUploadSuccess={handleUploadSuccess}
+            selectedAd={selectedAd}
+            customerInfo={customerInfo}
+          />
+        )}
+
+        {currentStep === 3 && (
+          <OrderSummaryStep state={stateName} selectedAd={selectedAd} />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="p-6 border-t border-gray-800">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-400">PRESENTED BY CANNABIS NOW & LIONTEK MEDIA</div>
+          <div className="flex space-x-4">
+            <Facebook className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+            <Twitter className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+            <Instagram className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
 
 // AdSelectionStep component
 function AdSelectionStep({
