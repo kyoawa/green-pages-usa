@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
     }
     
-    // List objects in S3 to find the file (since original filename is appended)
+    // List objects in S3 to find the file
     const listCommand = new ListObjectsV2Command({
       Bucket: BUCKET_NAME,
       Prefix: `submissions/${submissionId}/${fileType}_`
@@ -56,7 +55,8 @@ export async function GET(request: NextRequest) {
     if (!listResponse.Contents || listResponse.Contents.length === 0) {
       return NextResponse.json({ 
         error: 'File not found in S3', 
-        searchingFor: `submissions/${submissionId}/${fileType}_`
+        searchingFor: `submissions/${submissionId}/${fileType}_`,
+        bucket: BUCKET_NAME
       }, { status: 404 })
     }
     
@@ -70,35 +70,47 @@ export async function GET(request: NextRequest) {
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .replace(/_+/g, '_')
     
+    // Get the file from S3
+    const getCommand = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: s3Key
+    })
+    
+    const s3Response = await s3Client.send(getCommand)
+    
+    // Convert the stream to a buffer
+    const chunks: Uint8Array[] = []
+    const stream = s3Response.Body as any
+    
+    for await (const chunk of stream) {
+      chunks.push(chunk)
+    }
+    
+    const buffer = Buffer.concat(chunks)
+    
     // Get correct MIME type
     const mimeType = getMimeType(fileName)
     
     console.log('S3 Key:', s3Key)
-    console.log('Original filename:', fileName)
     console.log('Sanitized filename:', sanitizedFileName)
     console.log('MIME type:', mimeType)
+    console.log('Buffer size:', buffer.length)
     
-    // Generate a signed URL for download
-    const command = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: s3Key,
-      ResponseContentDisposition: `attachment; filename="${sanitizedFileName}"`,
-      ResponseContentType: mimeType
+    // Return the file directly
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Disposition': `attachment; filename="${sanitizedFileName}"`,
+        'Content-Type': mimeType,
+        'Content-Length': buffer.length.toString(),
+      },
     })
-    
-    // Create a signed URL that expires in 1 hour
-    const signedUrl = await getSignedUrl(s3Client, command, { 
-      expiresIn: 3600
-    })
-    
-    // Redirect to the signed URL
-    return NextResponse.redirect(signedUrl)
     
   } catch (error) {
     console.error('Download error:', error)
     return NextResponse.json({ 
       error: 'Download failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      bucket: BUCKET_NAME
     }, { status: 500 })
   }
 }
