@@ -1,9 +1,10 @@
+// app/api/create-payment-intent/route.js
 import Stripe from "stripe"
 import { NextResponse } from "next/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-// ---- helpers: normalize to canonical values your DB expects ----
+// Helper functions remain the same...
 const toStateCode = (s) => {
   if (!s) return s
   if (s.length === 2) return s.toUpperCase()
@@ -28,53 +29,71 @@ const toAdKey = (t) => {
   if (["halfpage","half","1/2"].includes(k)) return "half"
   if (["fullpage","full"].includes(k)) return "full"
   if (["single","listing"].includes(k)) return "single"
-  return k // assume already canonical: "half" | "quarter" | "full" | "single"
+  return k
 }
 
 export async function POST(request) {
-  // be resilient to bad JSON
-  const payload = await request.json().catch(() => ({}))
-  let { amount, state, adType, adTitle, payment_method_types } = payload
-
-  // ---- basic validation ----
-  const errors = []
-  if (amount == null) errors.push("amount is required")
-  if (!state) errors.push("state is required")
-  if (!adType) errors.push("adType is required")
-  if (errors.length) {
-    return NextResponse.json({ message: `Invalid payload: ${errors.join(", ")}` }, { status: 400 })
-  }
-
-  // normalize into the canonical values your DB uses
-  const stateCode = toStateCode(state)               // e.g. "MT"
-  const adKey = toAdKey(adType)                      // e.g. "half"
-
-  // convert to integer cents and sanity-check
-  const cents = Math.round(Number(amount) * 100)
-  if (!Number.isFinite(cents) || cents <= 0) {
-    return NextResponse.json({ message: "amount must be a positive number" }, { status: 400 })
-  }
-
   try {
+    const payload = await request.json()
+    const { amount, state, adType, adTitle } = payload
+    
+    // Validation
+    const errors = []
+    if (amount == null || amount <= 0) errors.push("valid amount is required")
+    if (!state) errors.push("state is required")
+    if (!adType) errors.push("adType is required")
+    
+    if (errors.length) {
+      console.error('Validation errors:', errors)
+      return NextResponse.json({ 
+        message: `Invalid payload: ${errors.join(", ")}` 
+      }, { status: 400 })
+    }
+    
+    // Normalize values
+    const stateCode = toStateCode(state)
+    const adKey = toAdKey(adType)
+    
+    // Convert to cents and ensure it's a valid number
+    const cents = Math.round(Number(amount) * 100)
+    
+    if (!Number.isFinite(cents) || cents <= 0) {
+      console.error('Invalid amount:', amount, 'cents:', cents)
+      return NextResponse.json({ 
+        message: "amount must be a positive number" 
+      }, { status: 400 })
+    }
+    
+    console.log('Creating payment intent:', { 
+      amount, 
+      cents, 
+      state: stateCode, 
+      adType: adKey 
+    })
+    
     const paymentIntent = await stripe.paymentIntents.create({
       amount: cents,
       currency: "usd",
-      payment_method_types: payment_method_types || ["card", "us_bank_account"],
-      // IMPORTANT: store canonical values for confirm → update-inventory
       metadata: {
-        state: stateCode,       // "MT", "CA", ...
-        adType: adKey,          // "half" | "quarter" | "full" | "single"
+        state: stateCode,
+        adType: adKey,
         adTitle: adTitle || ""
       },
-      description: adTitle ? `Ad purchase: ${adTitle} (${stateCode}/${adKey})` : `Ad purchase (${stateCode}/${adKey})`,
+      description: adTitle ? 
+        `Ad purchase: ${adTitle} (${stateCode}/${adKey})` : 
+        `Ad purchase (${stateCode}/${adKey})`
     })
-
+    
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     })
+    
   } catch (error) {
     console.error("Error creating payment intent:", error)
-    return NextResponse.json({ message: "Error creating payment intent" }, { status: 500 })
+    return NextResponse.json({ 
+      message: "Error creating payment intent",
+      error: error.message 
+    }, { status: 500 })
   }
 }

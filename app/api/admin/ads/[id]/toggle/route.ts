@@ -1,3 +1,4 @@
+// app/api/admin/ads/[id]/toggle/route.ts
 import { NextResponse } from 'next/server'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb'
@@ -12,11 +13,14 @@ const client = new DynamoDBClient({
 
 const docClient = DynamoDBDocumentClient.from(client)
 
-// POST toggle ad active status
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
+    const { id } = params
     const body = await request.json()
-    const { id, active } = body
+    const { active } = body
     
     const command = new UpdateCommand({
       TableName: 'green-pages-ads',

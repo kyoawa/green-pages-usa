@@ -190,6 +190,7 @@ export default function AdminAdsPage() {
     }
   }
 
+ 
   const toggleAdActive = async (adId: string, currentStatus: boolean) => {
     try {
       const response = await fetch(`/api/admin/ads/${adId}/toggle`, {
@@ -197,12 +198,21 @@ export default function AdminAdsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !currentStatus })
       })
-      
-      if (response.ok) {
-        await fetchAds()
+    
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('Toggle failed:', error)
+        throw new Error('Failed to toggle ad')
       }
+    
+      const result = await response.json()
+      console.log('Toggle successful:', result)
+    
+      // Refresh the ads list
+      await fetchAds()
     } catch (error) {
       console.error('Error toggling ad:', error)
+      alert('Failed to toggle ad status. Please try again.')
     }
   }
 
