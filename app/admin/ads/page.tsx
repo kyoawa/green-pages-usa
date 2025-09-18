@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react'
-import { Package, DollarSign, Eye, EyeOff, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Package, DollarSign, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Ad {
   id: string
@@ -11,7 +11,6 @@ interface Ad {
   inventory: number
   totalSlots: number
   description: string
-  active: boolean
   createdAt: string
   updatedAt: string
 }
@@ -190,35 +189,8 @@ export default function AdminAdsPage() {
     }
   }
 
- 
-  const toggleAdActive = async (adId: string, currentStatus: boolean) => {
-    try {
-      const response = await fetch(`/api/admin/ads/${adId}/toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !currentStatus })
-      })
-    
-      if (!response.ok) {
-        const error = await response.text()
-        console.error('Toggle failed:', error)
-        throw new Error('Failed to toggle ad')
-      }
-    
-      const result = await response.json()
-      console.log('Toggle successful:', result)
-    
-      // Refresh the ads list
-      await fetchAds()
-    } catch (error) {
-      console.error('Error toggling ad:', error)
-      alert('Failed to toggle ad status. Please try again.')
-    }
-  }
-
   // Calculate totals
   const totalAds = Object.values(adsByState).flat().length
-  const activeAds = Object.values(adsByState).flat().filter(ad => ad.active).length
   const totalInventory = Object.values(adsByState).flat().reduce((sum, ad) => sum + ad.inventory, 0)
   const totalRevenuePotential = Object.values(adsByState).flat().reduce((sum, ad) => sum + (ad.price * ad.inventory), 0)
 
@@ -246,10 +218,6 @@ export default function AdminAdsPage() {
           <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', padding: '20px', borderRadius: '8px' }}>
             <h3 style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Total Ad Types</h3>
             <p style={{ fontSize: '28px', fontWeight: 'bold' }}>{totalAds}</p>
-          </div>
-          <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', padding: '20px', borderRadius: '8px' }}>
-            <h3 style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Active Ads</h3>
-            <p style={{ fontSize: '28px', fontWeight: 'bold' }}>{activeAds}</p>
           </div>
           <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', padding: '20px', borderRadius: '8px' }}>
             <h3 style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Total Inventory</h3>
@@ -553,16 +521,6 @@ export default function AdminAdsPage() {
                                       {ad.title}
                                     </h4>
                                     <span style={{
-                                      backgroundColor: ad.active ? '#22c55e' : '#ef4444',
-                                      color: ad.active ? '#000' : '#fff',
-                                      padding: '2px 8px',
-                                      borderRadius: '4px',
-                                      fontSize: '12px',
-                                      fontWeight: '500'
-                                    }}>
-                                      {ad.active ? 'Active' : 'Inactive'}
-                                    </span>
-                                    <span style={{
                                       backgroundColor: '#374151',
                                       color: '#fff',
                                       padding: '2px 8px',
@@ -600,19 +558,6 @@ export default function AdminAdsPage() {
                                 </div>
                                 
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button
-                                    onClick={() => toggleAdActive(ad.id, ad.active)}
-                                    style={{
-                                      backgroundColor: 'transparent',
-                                      color: ad.active ? '#22c55e' : '#6b7280',
-                                      padding: '6px',
-                                      border: 'none',
-                                      cursor: 'pointer'
-                                    }}
-                                    title={ad.active ? 'Deactivate' : 'Activate'}
-                                  >
-                                    {ad.active ? <Eye size={18} /> : <EyeOff size={18} />}
-                                  </button>
                                   <button
                                     onClick={() => {
                                       setEditingAd(ad.id)

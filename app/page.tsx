@@ -89,7 +89,8 @@ export default function ReactSimpleMapsHomepage() {
         stroke: '#54f104', // Bright green border
         strokeWidth: 2.5,
         cursor: 'pointer',
-        transition: 'fill 0.2s ease'
+        transition: 'fill 0.2s ease',
+        outline: 'none'
       }
     } else {
       return {
@@ -97,7 +98,8 @@ export default function ReactSimpleMapsHomepage() {
         stroke: '#54f104', // All states get green border
         strokeWidth: 2.5,
         cursor: 'not-allowed',
-        transition: 'stroke 0.2s ease'
+        transition: 'stroke 0.2s ease',
+        outline: 'none'
       }
     }
   }
@@ -112,6 +114,46 @@ export default function ReactSimpleMapsHomepage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Global styles for removing focus outlines and adding glow animation */}
+      <style jsx global>{`
+        /* Remove all focus outlines from map elements */
+        path:focus,
+        path:focus-visible,
+        .rsm-geography:focus,
+        .rsm-geography:focus-visible,
+        svg path:focus,
+        svg path:focus-visible {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+        
+        /* Glowing text animation for SELECT */
+        @keyframes pulse-glow {
+          0%, 100% {
+            text-shadow: 
+              0 0 10px #54f104,
+              0 0 20px #54f104,
+              0 0 30px #54f104,
+              0 0 40px #54f104;
+            opacity: 1;
+          }
+          50% {
+            text-shadow: 
+              0 0 20px #54f104,
+              0 0 30px #54f104,
+              0 0 40px #54f104,
+              0 0 50px #54f104,
+              0 0 75px #54f104;
+            opacity: 0.95;
+          }
+        }
+        
+        .glow-text {
+          color: #54f104;
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+      `}</style>
+
       {/* Header */}
       <header className="flex items-center justify-between p-6 border-b border-gray-800">
         <div className="flex items-center space-x-2">
@@ -132,10 +174,11 @@ export default function ReactSimpleMapsHomepage() {
       {/* Main Content */}
       <main className="flex-1 p-6">
         <div className="max-w-6xl mx-auto text-center">
-          {/* Title */}
+          {/* Title with glowing SELECT */}
           <div className="mb-8">
             <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              SELECT YOUR STATE
+              <span className="glow-text">SELECT</span>
+              <span className="text-white"> YOUR STATE</span>
             </h1>
             <p className="text-gray-400 text-lg mb-2">
               Choose your state to view advertising opportunities
@@ -170,6 +213,7 @@ export default function ReactSimpleMapsHomepage() {
                             onClick={() => handleStateClick(geo)}
                             onMouseEnter={() => setHoveredState(stateCode)}
                             onMouseLeave={() => setHoveredState(null)}
+                            tabIndex={-1}  // Prevents keyboard focus
                           />
                         )
                       })

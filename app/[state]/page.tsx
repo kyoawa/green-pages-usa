@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from 'next/navigation'
 import { EnhancedCheckoutStep } from '@/components/EnhancedCheckout'
 import UploadRequirements from '@/components/UploadRequirements'
+import StateMap from '@/components/StateMap'
 import { Loader2, Facebook, Twitter, Instagram } from "lucide-react"
 
 interface AdData {
@@ -320,7 +321,7 @@ export default function DynamicStatePage() {
   )
 }
 
-// AdSelectionStep component
+// AdSelectionStep component with StateMap integration
 function AdSelectionStep({
   onAdSelect,
   state,
@@ -336,18 +337,6 @@ function AdSelectionStep({
   loading: boolean
   onRefresh: () => void
 }) {
-  const getStateSvg = (code: string) => {
-    const stateMap: { [key: string]: string } = {
-      MT: "/states/mt.svg",
-      CA: "/states/ca.svg", 
-      OK: "/states/ok.svg",
-      NY: "/states/nyc.svg",
-      IL: "/states/il.svg",
-      MO: "/states/mo.svg"
-    }
-    return stateMap[code] || null
-  }
-
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto text-center">
@@ -357,21 +346,14 @@ function AdSelectionStep({
     )
   }
 
-  const stateSvg = getStateSvg(stateCode)
-
   return (
     <>
-      <div className="text-center mb-12">
-        <div className="flex items-center justify-center mb-6">
-          {stateSvg && (
-            <img 
-              src={stateSvg} 
-              alt={`${state} outline`} 
-              className="h-16 w-auto mr-4 opacity-80"
-            />
-          )}
-          <h1 className="text-4xl font-bold">{state.toUpperCase()}</h1>
-        </div>
+      {/* State Map with green glow effect */}
+      <div className="mb-12">
+        <StateMap stateName={state} stateCode={stateCode} className="mb-8" />
+      </div>
+
+      <div className="text-center mb-8">
         <p className="text-gray-400 text-lg">
           Choose your advertising package for {state}
         </p>
