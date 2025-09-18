@@ -111,15 +111,10 @@ export default function AdminSubmissions() {
     setExpandedStates(newExpanded)
   }
 
-  // Direct download from S3 URLs
-  const downloadFile = (url: string, filename: string) => {
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.target = '_blank' // Open in new tab for S3 URLs
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+  // Use API route for downloads instead of direct S3 access
+  const handleDownload = (submissionId: string, fileType: 'document' | 'photo' | 'logo') => {
+    const downloadUrl = `/api/admin/submissions/download?id=${submissionId}&type=${fileType}`
+    window.open(downloadUrl, '_blank')
   }
 
   // Group submissions by state
@@ -359,7 +354,7 @@ export default function AdminSubmissions() {
                                     <span style={{ color: '#fff', fontSize: '13px' }}>Document File</span>
                                     {submission.documentUrl ? (
                                       <button 
-                                        onClick={() => downloadFile(submission.documentUrl!, `${submission.id}_document`)}
+                                        onClick={() => handleDownload(submission.id, 'document')}
                                         style={{
                                           backgroundColor: '#22c55e',
                                           color: '#000',
@@ -382,7 +377,7 @@ export default function AdminSubmissions() {
                                     <span style={{ color: '#fff', fontSize: '13px' }}>Photo File</span>
                                     {submission.photoUrl ? (
                                       <button 
-                                        onClick={() => downloadFile(submission.photoUrl!, `${submission.id}_photo`)}
+                                        onClick={() => handleDownload(submission.id, 'photo')}
                                         style={{
                                           backgroundColor: '#22c55e',
                                           color: '#000',
@@ -405,7 +400,7 @@ export default function AdminSubmissions() {
                                     <span style={{ color: '#fff', fontSize: '13px' }}>Logo File</span>
                                     {submission.logoUrl ? (
                                       <button 
-                                        onClick={() => downloadFile(submission.logoUrl!, `${submission.id}_logo`)}
+                                        onClick={() => handleDownload(submission.id, 'logo')}
                                         style={{
                                           backgroundColor: '#22c55e',
                                           color: '#000',

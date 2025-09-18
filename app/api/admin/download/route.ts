@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
     const submissionId = searchParams.get('id')
     const fileType = searchParams.get('type')
     
+    console.log('Download request:', { submissionId, fileType, BUCKET_NAME })
+    console.log('AWS Config:', { 
+      region: process.env.AWS_REGION,
+      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+      bucketName: BUCKET_NAME
+    })
+    
     if (!submissionId || !fileType) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
     }
@@ -50,67 +58,84 @@ export async function GET(request: NextRequest) {
       Prefix: `submissions/${submissionId}/${fileType}_`
     })
     
-    const listResponse = await s3Client.send(listCommand)
+    console.log('Listing S3 objects with prefix:', `submissions/${submissionId}/${fileType}_`)
     
-    if (!listResponse.Contents || listResponse.Contents.length === 0) {
+    try {
+      const listResponse = await s3Client.send(listCommand)
+      console.log('List response:', listResponse)
+      
+      if (!listResponse.Contents || listResponse.Contents.length === 0) {
+        return NextResponse.json({ 
+          error: 'File not found in S3', 
+          searchingFor: `submissions/${submissionId}/${fileType}_`,
+          bucket: BUCKET_NAME
+        }, { status: 404 })
+      }
+      
+      // Get the first matching file
+      const s3Key = listResponse.Contents[0].Key!
+      const fileName = s3Key.split('/').pop() || `${fileType}_download`
+      
+      console.log('Found S3 object:', s3Key)
+      
+      // Sanitize filename for download
+      const sanitizedFileName = fileName
+        .replace(/[^\x20-\x7E]/g, '')
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .replace(/_+/g, '_')
+      
+      // Get the file from S3
+      const getCommand = new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key
+      })
+      
+      console.log('Getting object from S3...')
+      const s3Response = await s3Client.send(getCommand)
+      
+      // Convert the stream to a buffer
+      const chunks: Uint8Array[] = []
+      const stream = s3Response.Body as any
+      
+      for await (const chunk of stream) {
+        chunks.push(chunk)
+      }
+      
+      const buffer = Buffer.concat(chunks)
+      
+      // Get correct MIME type
+      const mimeType = getMimeType(fileName)
+      
+      console.log('Success! Sending file:', {
+        fileName: sanitizedFileName,
+        mimeType,
+        size: buffer.length
+      })
+      
+      // Return the file directly
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Disposition': `attachment; filename="${sanitizedFileName}"`,
+          'Content-Type': mimeType,
+          'Content-Length': buffer.length.toString(),
+        },
+      })
+    } catch (s3Error: any) {
+      console.error('S3 Error:', s3Error)
       return NextResponse.json({ 
-        error: 'File not found in S3', 
-        searchingFor: `submissions/${submissionId}/${fileType}_`,
-        bucket: BUCKET_NAME
-      }, { status: 404 })
+        error: 'S3 Access Error',
+        message: s3Error.message,
+        code: s3Error.Code,
+        bucket: BUCKET_NAME,
+        region: process.env.AWS_REGION
+      }, { status: 500 })
     }
-    
-    // Get the first matching file
-    const s3Key = listResponse.Contents[0].Key!
-    const fileName = s3Key.split('/').pop() || `${fileType}_download`
-    
-    // Sanitize filename for download
-    const sanitizedFileName = fileName
-      .replace(/[^\x20-\x7E]/g, '')
-      .replace(/[^a-zA-Z0-9._-]/g, '_')
-      .replace(/_+/g, '_')
-    
-    // Get the file from S3
-    const getCommand = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: s3Key
-    })
-    
-    const s3Response = await s3Client.send(getCommand)
-    
-    // Convert the stream to a buffer
-    const chunks: Uint8Array[] = []
-    const stream = s3Response.Body as any
-    
-    for await (const chunk of stream) {
-      chunks.push(chunk)
-    }
-    
-    const buffer = Buffer.concat(chunks)
-    
-    // Get correct MIME type
-    const mimeType = getMimeType(fileName)
-    
-    console.log('S3 Key:', s3Key)
-    console.log('Sanitized filename:', sanitizedFileName)
-    console.log('MIME type:', mimeType)
-    console.log('Buffer size:', buffer.length)
-    
-    // Return the file directly
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Disposition': `attachment; filename="${sanitizedFileName}"`,
-        'Content-Type': mimeType,
-        'Content-Length': buffer.length.toString(),
-      },
-    })
     
   } catch (error) {
     console.error('Download error:', error)
     return NextResponse.json({ 
       error: 'Download failed',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      bucket: BUCKET_NAME
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }
