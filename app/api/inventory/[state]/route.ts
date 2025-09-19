@@ -1,13 +1,23 @@
 // app/api/inventory/[state]/route.ts
 import { NextResponse } from 'next/server'
-import { InventoryDB } from '@/lib/dynamodb'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb'
+
+const client = new DynamoDBClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
+
+const docClient = DynamoDBDocumentClient.from(client)
 
 export async function GET(
   request: Request,
   { params }: { params: { state: string } }
 ) {
   const { state } = params
-  const db = new InventoryDB()
   
   try {
     // Handle both state codes (AL) and names (alabama)
@@ -21,7 +31,23 @@ export async function GET(
     
     console.log(`Fetching inventory for state: ${stateCode}`)
     
-    const inventory = await db.getInventoryByState(stateCode)
+    // Query the same table that admin uses (green-pages-ads)
+    const command = new ScanCommand({
+      TableName: 'green-pages-ads',
+      FilterExpression: "#state = :state AND active = :active",
+      ExpressionAttributeNames: { 
+        "#state": "state" 
+      },
+      ExpressionAttributeValues: { 
+        ":state": stateCode,
+        ":active": true
+      }
+    })
+    
+    const response = await docClient.send(command)
+    const inventory = response.Items || []
+    
+    console.log(`Found ${inventory.length} ads for ${stateCode}`)
     
     // Return empty array if no inventory (not an error)
     if (!inventory || inventory.length === 0) {
@@ -34,7 +60,7 @@ export async function GET(
       price: item.price,
       remaining: `${item.inventory}/${item.totalSlots} REMAINING`,
       inventory: item.inventory,
-      total_slots: item.totalSlots || item.total_slots,
+      total_slots: item.totalSlots,
       description: item.description
     }))
     

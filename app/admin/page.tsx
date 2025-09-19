@@ -1,12 +1,44 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Home, Package, Users, FileText, Settings, BarChart, Database, ArrowRight } from 'lucide-react'
+import { Home, Package, Users, FileText, Settings, BarChart, Database, ArrowRight, Lock, Eye, EyeOff, LogOut } from 'lucide-react'
+
+const ADMIN_PASSWORD = "IGotFanuzzled" // Change this to whatever you want
 
 export default function AdminPage() {
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+
+  // Check if already authenticated on page load
+  useEffect(() => {
+    const authenticated = sessionStorage.getItem('admin_authenticated')
+    if (authenticated === 'true') {
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password === ADMIN_PASSWORD) {
+      setIsAuthenticated(true)
+      sessionStorage.setItem('admin_authenticated', 'true')
+      setError('')
+    } else {
+      setError('Incorrect password')
+      setPassword('')
+    }
+  }
+
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    sessionStorage.removeItem('admin_authenticated')
+    setPassword('')
+  }
 
   const initializeData = async () => {
     setLoading(true)
@@ -21,15 +53,115 @@ export default function AdminPage() {
     }
   }
 
+  // Login form
+  if (!isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ backgroundColor: '#1f2937', padding: '32px', borderRadius: '8px', border: '1px solid #374151', width: '100%', maxWidth: '400px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px' }}>
+            <Lock style={{ height: '48px', width: '48px', color: '#22c55e' }} />
+          </div>
+          
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center', marginBottom: '32px' }}>Green Pages Admin</h1>
+          
+          <form onSubmit={handleLogin} style={{ marginBottom: '0' }}>
+            <div style={{ position: 'relative', marginBottom: '24px' }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter admin password"
+                style={{
+                  width: '100%',
+                  backgroundColor: '#111827',
+                  border: '1px solid #374151',
+                  borderRadius: '6px',
+                  padding: '12px 48px 12px 16px',
+                  color: '#fff',
+                  fontSize: '16px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#22c55e'}
+                onBlur={(e) => e.target.style.borderColor = '#374151'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            
+            {error && (
+              <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center', marginBottom: '16px' }}>{error}</div>
+            )}
+            
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                backgroundColor: '#22c55e',
+                color: '#000',
+                fontWeight: 'bold',
+                padding: '12px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  // Your existing admin dashboard
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', padding: '32px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', color: '#22c55e' }}>
-            Green Pages Admin
-          </h1>
-          <p style={{ color: '#9ca3af' }}>Manage your dispensary advertising platform</p>
+        {/* Header with Logout Button */}
+        <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+          <div>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', color: '#22c55e' }}>
+              Green Pages Admin
+            </h1>
+            <p style={{ color: '#9ca3af' }}>Manage your dispensary advertising platform</p>
+          </div>
+          
+          <button
+            onClick={handleLogout}
+            style={{
+              backgroundColor: '#ef4444',
+              color: '#fff',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
         </div>
 
         {/* Quick Stats */}

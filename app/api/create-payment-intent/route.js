@@ -37,6 +37,9 @@ export async function POST(request) {
     const payload = await request.json()
     const { amount, state, adType, adTitle } = payload
     
+    console.log('=== CREATE PAYMENT INTENT ===')
+    console.log('Original payload:', { amount, state, adType, adTitle })
+    
     // Validation
     const errors = []
     if (amount == null || amount <= 0) errors.push("valid amount is required")
@@ -53,6 +56,13 @@ export async function POST(request) {
     // Normalize values
     const stateCode = toStateCode(state)
     const adKey = toAdKey(adType)
+    
+    console.log('Normalized values:', { 
+      originalState: state, 
+      normalizedState: stateCode,
+      originalAdType: adType,
+      normalizedAdType: adKey
+    })
     
     // Convert to cents and ensure it's a valid number
     const cents = Math.round(Number(amount) * 100)
@@ -77,12 +87,17 @@ export async function POST(request) {
       metadata: {
         state: stateCode,
         adType: adKey,
-        adTitle: adTitle || ""
+        adTitle: adTitle || "",
+        // Keep originals for debugging
+        originalState: state,
+        originalAdType: adType
       },
       description: adTitle ? 
         `Ad purchase: ${adTitle} (${stateCode}/${adKey})` : 
         `Ad purchase (${stateCode}/${adKey})`
     })
+    
+    console.log('Payment intent created with metadata:', paymentIntent.metadata)
     
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
