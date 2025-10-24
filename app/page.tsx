@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
-import { Facebook, Twitter, Instagram } from 'lucide-react'
+
 
 // US states topology URL
 const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"
@@ -164,10 +164,8 @@ export default function ReactSimpleMapsHomepage() {
           />
         </div>
         <nav className="flex space-x-8">
-          <a href="#" className="text-gray-300 hover:text-white">ABOUT</a>
-          <a href="#" className="text-gray-300 hover:text-white">DIGITAL</a>
-          <a href="#" className="text-gray-300 hover:text-white">PRINT</a>
-          <a href="#" className="text-gray-300 hover:text-white">CONTACT</a>
+          <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
+          <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
         </nav>
       </header>
 
@@ -258,14 +256,9 @@ export default function ReactSimpleMapsHomepage() {
 
       {/* Footer */}
       <footer className="bg-gray-900 border-t border-gray-800 p-6 mt-16">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
+        <div className="max-w-6xl mx-auto text-center">
           <div className="text-sm text-gray-400">
-            PRESENTED BY CANNABIS NOW & LIONTEK MEDIA
-          </div>
-          <div className="flex space-x-4">
-            <Facebook className="text-gray-400 hover:text-white cursor-pointer" size={20} />
-            <Twitter className="text-gray-400 hover:text-white cursor-pointer" size={20} />
-            <Instagram className="text-gray-400 hover:text-white cursor-pointer" size={20} />
+            © Green Pages USA 2025
           </div>
         </div>
       </footer>

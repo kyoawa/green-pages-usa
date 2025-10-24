@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { EnhancedCheckoutStep } from '@/components/EnhancedCheckout'
 import UploadRequirements from '@/components/UploadRequirements'
 import StateMap from '@/components/StateMap'
-import { Loader2, Facebook, Twitter, Instagram } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 interface AdData {
   id: string
@@ -237,10 +237,8 @@ export default function DynamicStatePage() {
           />
         </div>
         <nav className="flex space-x-8">
-          <a href="#" className="text-gray-300 hover:text-white">ABOUT</a>
-          <a href="#" className="text-gray-300 hover:text-white">DIGITAL</a>
-          <a href="#" className="text-gray-300 hover:text-white">PRINT</a>
-          <a href="#" className="text-gray-300 hover:text-white">CONTACT</a>
+          <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
+          <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
         </nav>
       </header>
 
@@ -307,13 +305,10 @@ export default function DynamicStatePage() {
       </main>
 
       {/* Footer */}
-      <footer className="p-6 border-t border-gray-800">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-400">PRESENTED BY CANNABIS NOW & LIONTEK MEDIA</div>
-          <div className="flex space-x-4">
-            <Facebook className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
-            <Twitter className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
-            <Instagram className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+      <footer className="bg-gray-900 border-t border-gray-800 p-6">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className="text-sm text-gray-400">
+            © Green Pages USA 2025
           </div>
         </div>
       </footer>
