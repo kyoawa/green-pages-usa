@@ -412,81 +412,102 @@ function AdSelectionStep({
         <StateMap stateName={state} stateCode={stateCode} className="mb-8" />
       </div>
 
-      <div className="text-center mb-8">
-        <p className="text-gray-400 text-lg">
-          Choose your advertising package for {state}
+      <div className="text-center mb-12">
+        <p className="text-gray-400 text-xl font-light tracking-wide">
+          Choose your advertising package for <span className="text-white font-semibold">{state}</span>
         </p>
+        <div className="w-24 h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent mx-auto mt-4 rounded-full" />
       </div>
 
-      <div className="grid gap-6 max-w-4xl mx-auto">
+      <div className="grid gap-4 max-w-5xl mx-auto">
         {inventory.map((ad) => (
           <div
             key={ad.id}
-            className={`border rounded-lg p-6 transition-all duration-200 ${
+            className={`group relative rounded-2xl transition-all duration-200 ${
               ad.inventory > 0
-                ? "border-gray-700 hover:border-green-500 hover:bg-gray-900/50"
-                : "border-gray-800 opacity-50"
+                ? "bg-[#1e293b] hover:bg-[#334155] shadow-lg hover:shadow-xl"
+                : "bg-[#0f172a] opacity-60"
             }`}
           >
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">{ad.title}</h3>
-                <p className="text-gray-400 text-sm mb-3">{ad.description}</p>
-                <div className="text-sm text-gray-500">{ad.remaining}</div>
+            <div className="flex items-center justify-between gap-6 p-5">
+              {/* Left section - Title and Description */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-2xl font-bold text-white tracking-tight mb-1.5">{ad.title}</h3>
+                <p className="text-slate-400 text-sm mb-3">{ad.description}</p>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ad.inventory > 0 ? 'bg-green-500' : 'bg-slate-600'}`} />
+                  <span className="text-xs text-slate-500 font-medium">{ad.remaining}</span>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-green-400 mb-2">
-                  ${ad.price.toLocaleString()}
+
+              {/* Right section - Price, Quantity, and Actions */}
+              <div className="flex items-center gap-6">
+                {/* Price - Left justified */}
+                <div className="text-left">
+                  <div className="text-4xl font-bold text-green-500">
+                    ${ad.price.toLocaleString()}
+                  </div>
                 </div>
 
-                {/* Quantity Input */}
-                {isSignedIn && ad.inventory > 0 && (
-                  <div className="mb-2">
-                    <label className="text-xs text-gray-400 block mb-1">Quantity</label>
+                {/* Quantity + Buttons - Aligned horizontally */}
+                <div className="flex items-center gap-3">
+                  {/* Quantity Input */}
+                  {isSignedIn && ad.inventory > 0 && (
                     <input
                       type="number"
                       min="1"
                       max={ad.inventory}
                       value={getQuantity(ad.id)}
                       onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
-                      className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-center"
+                      placeholder="QTY"
+                      className="w-16 h-12 px-2 bg-black border-2 border-slate-700 rounded-xl text-white text-center text-sm font-bold focus:outline-none focus:border-green-500 transition-colors placeholder:text-slate-600"
                       onClick={(e) => e.stopPropagation()}
                     />
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  {/* Add to Cart Button */}
-                  {isSignedIn && ad.inventory > 0 && (
-                    <button
-                      disabled={addingToCart === ad.id}
-                      className="font-semibold py-2 px-4 rounded-lg transition-colors bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 flex items-center gap-2"
-                      onClick={(e) => handleAddToCart(ad, e)}
-                    >
-                      {addingToCart === ad.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ShoppingCart className="h-4 w-4" />
-                      )}
-                      Add to Cart
-                    </button>
                   )}
 
-                  {/* Buy Now Button */}
-                  <button
-                    disabled={ad.inventory === 0}
-                    className={`font-semibold py-2 px-6 rounded-lg transition-colors ${
-                      ad.inventory > 0
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (ad.inventory > 0) onAdSelect(ad)
-                    }}
-                  >
-                    {ad.inventory > 0 ? 'Buy Now →' : 'SOLD OUT'}
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    {/* Add to Cart Icon Button */}
+                    {isSignedIn && ad.inventory > 0 && (
+                      <button
+                        disabled={addingToCart === ad.id}
+                        className="w-12 h-12 rounded-xl bg-[#334155] hover:bg-[#475569] border-2 border-slate-700 text-white disabled:opacity-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                        onClick={(e) => handleAddToCart(ad, e)}
+                        title="Add to Cart"
+                      >
+                        {addingToCart === ad.id ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <ShoppingCart className="h-5 w-5" />
+                        )}
+                      </button>
+                    )}
+
+                    {/* Buy Now Icon Button */}
+                    <button
+                      disabled={ad.inventory === 0}
+                      className={`w-12 h-12 rounded-xl transition-all duration-200 flex items-center justify-center ${
+                        ad.inventory > 0
+                          ? "bg-green-500 hover:bg-green-400 text-black shadow-lg shadow-green-500/30 hover:scale-110 active:scale-95"
+                          : "bg-[#334155] text-slate-600 cursor-not-allowed"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (ad.inventory > 0) onAdSelect(ad)
+                      }}
+                      title={ad.inventory > 0 ? "Buy Now" : "Sold Out"}
+                    >
+                      {ad.inventory > 0 ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
