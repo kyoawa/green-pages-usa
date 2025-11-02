@@ -101,8 +101,7 @@ const CheckoutForm = ({ onPaymentSuccess, state, selectedAd, paymentProcessing }
   }
 
   const subtotal = selectedAd?.price || 0
-  const tax = subtotal * 0.08
-  const total = subtotal + tax
+  const total = subtotal // No tax for services
 
   // Order Summary Component (reusable for mobile and desktop)
   const OrderSummary = ({ className = "" }) => (
@@ -123,13 +122,9 @@ const CheckoutForm = ({ onPaymentSuccess, state, selectedAd, paymentProcessing }
         </div>
         
         <div className="bg-gray-800 p-3 lg:p-4 rounded-md">
-          <div className="flex justify-between items-center text-xs lg:text-sm text-gray-400 mb-1">
-            <span>Tax</span>
-            <span>USD {tax.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between items-center text-xs lg:text-sm text-green-400">
-            <span>Digital Impressions</span>
-            <span>Included</span>
+          <div className="flex justify-between items-center text-xs lg:text-sm text-gray-400">
+            <span>Subtotal</span>
+            <span>USD {subtotal.toFixed(2)}</span>
           </div>
         </div>
       </div>

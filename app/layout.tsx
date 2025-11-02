@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Roboto } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
 const roboto = Roboto({ 
@@ -10,9 +11,26 @@ const roboto = Roboto({
 })
 
 export const metadata: Metadata = {
-  title: 'USA Green Pages',
-  description: 'Cannabis advertising platform',
+  title: 'Green Pages USA',
+  description: 'The premier cannabis listing directory for dispensaries across the United States',
   generator: 'v0.app',
+  manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ]
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Green Pages'
+  },
+  applicationName: 'Green Pages USA',
+  themeColor: '#22c55e'
 }
 
 export default function RootLayout({
@@ -21,11 +39,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans ${roboto.variable}`}>
-        {children}
-        <Analytics />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`font-sans ${roboto.variable}`}>
+          {children}
+          <Analytics />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

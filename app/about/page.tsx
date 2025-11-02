@@ -1,6 +1,8 @@
 "use client"
 
 import React from 'react'
+import { CartButton } from '@/components/CartButton'
+import { UserMenu } from '@/components/UserMenu'
 
 
 export default function AboutPage() {
@@ -19,8 +21,13 @@ export default function AboutPage() {
         </div>
         <nav className="flex space-x-8">
           <a href="/about" className="text-white font-semibold">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
           <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
         </nav>
+        <div className="flex items-center gap-3">
+          <CartButton />
+          <UserMenu />
+        </div>
       </header>
 
       {/* Main Content */}
@@ -28,29 +35,11 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">About Green Pages USA</h1>
           
-          {/* Image Viewer - All 4 Pages Stacked */}
-          <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
+          {/* Image Viewer */}
+          <div className="overflow-hidden">
             <img
-              src="/about/Green Pages Landscape Media Kit_Page_1.png"
-              alt="About Green Pages USA - Page 1"
-              className="w-full h-auto"
-            />
-            <div className="border-t border-gray-700 my-1"></div>
-            <img
-              src="/about/Green Pages Landscape Media Kit_Page_2.png"
-              alt="About Green Pages USA - Page 2"
-              className="w-full h-auto"
-            />
-            <div className="border-t border-gray-700 my-1"></div>
-            <img
-              src="/about/Green Pages Landscape Media Kit_Page_3.png"
-              alt="About Green Pages USA - Page 3"
-              className="w-full h-auto"
-            />
-            <div className="border-t border-gray-700 my-1"></div>
-            <img
-              src="/about/Green Pages Landscape Media Kit_Page_4.png"
-              alt="About Green Pages USA - Page 4"
+              src="/about/Green Pages Website Media Kit.jpg"
+              alt="About Green Pages USA"
               className="w-full h-auto"
             />
           </div>

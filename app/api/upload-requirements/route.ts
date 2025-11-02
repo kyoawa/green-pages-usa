@@ -28,7 +28,7 @@ const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE_NAME || 'green-pages-sub
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    
+
     // Extract customer info and form data
     const customerEmail = formData.get('customerEmail') as string
     const customerName = formData.get('customerName') as string
@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
     const instagram = formData.get('instagram') as string
     const state = formData.get('state') as string
     const selectedAd = formData.get('selectedAd') as string
+    const orderId = formData.get('orderId') as string // Link to order
+    const itemId = formData.get('itemId') as string // Link to specific item
     
     // Extract files
     const documentFile = formData.get('documentFile') as File | null
@@ -111,6 +113,8 @@ export async function POST(request: NextRequest) {
       state,
       submittedAt: new Date().toISOString(),
       selectedAd: selectedAd ? JSON.parse(selectedAd) : null,
+      orderId: orderId || null, // Link back to order if provided
+      itemId: itemId || null, // Link to specific item if provided
       ...fileUrls,
       status: 'pending' // Track submission status
     }

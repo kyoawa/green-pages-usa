@@ -6,7 +6,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { EnhancedCheckoutStep } from '@/components/EnhancedCheckout'
 import UploadRequirements from '@/components/UploadRequirements'
 import StateMap from '@/components/StateMap'
-import { Loader2 } from "lucide-react"
+import { Loader2, ShoppingCart } from "lucide-react"
+import { useUser } from '@clerk/nextjs'
+import { CartButton } from '@/components/CartButton'
+import { UserMenu } from '@/components/UserMenu'
 
 interface AdData {
   id: string
@@ -238,8 +241,13 @@ export default function DynamicStatePage() {
         </div>
         <nav className="flex space-x-8">
           <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
           <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
         </nav>
+        <div className="flex items-center gap-3">
+          <CartButton />
+          <UserMenu />
+        </div>
       </header>
 
       {/* Progress Bar */}
@@ -324,7 +332,7 @@ function AdSelectionStep({
   inventory,
   loading,
   onRefresh
-}: { 
+}: {
   onAdSelect: (ad: AdData) => void
   state: string
   stateCode: string
@@ -332,6 +340,62 @@ function AdSelectionStep({
   loading: boolean
   onRefresh: () => void
 }) {
+  const { isSignedIn } = useUser()
+  const [addingToCart, setAddingToCart] = useState<string | null>(null)
+  const [quantities, setQuantities] = useState<{ [key: string]: number }>({})
+
+  const handleQuantityChange = (adId: string, value: string) => {
+    const numValue = parseInt(value) || 1
+    setQuantities(prev => ({ ...prev, [adId]: numValue }))
+  }
+
+  const getQuantity = (adId: string) => {
+    return quantities[adId] || 1
+  }
+
+  const handleAddToCart = async (ad: AdData, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (!isSignedIn) {
+      alert('Please sign in to add items to your cart')
+      return
+    }
+
+    const quantity = getQuantity(ad.id)
+
+    if (quantity > ad.inventory) {
+      alert(`Only ${ad.inventory} slots available`)
+      return
+    }
+
+    setAddingToCart(ad.id)
+    try {
+      const response = await fetch('/api/cart/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          state: stateCode,
+          adType: ad.id,
+          quantity: quantity,
+        }),
+      })
+
+      if (response.ok) {
+        alert(`${quantity}x ${ad.title} added to cart!`)
+        setQuantities(prev => ({ ...prev, [ad.id]: 1 })) // Reset quantity to 1
+        onRefresh() // Refresh inventory to show updated available count
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      alert('Failed to add to cart')
+    } finally {
+      setAddingToCart(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto text-center">
@@ -358,12 +422,11 @@ function AdSelectionStep({
         {inventory.map((ad) => (
           <div
             key={ad.id}
-            className={`border rounded-lg p-6 transition-all duration-200 cursor-pointer ${
-              ad.inventory > 0 
-                ? "border-gray-700 hover:border-green-500 hover:bg-gray-900/50" 
+            className={`border rounded-lg p-6 transition-all duration-200 ${
+              ad.inventory > 0
+                ? "border-gray-700 hover:border-green-500 hover:bg-gray-900/50"
                 : "border-gray-800 opacity-50"
             }`}
-            onClick={() => ad.inventory > 0 && onAdSelect(ad)}
           >
             <div className="flex justify-between items-center">
               <div>
@@ -375,20 +438,56 @@ function AdSelectionStep({
                 <div className="text-3xl font-bold text-green-400 mb-2">
                   ${ad.price.toLocaleString()}
                 </div>
-                <button 
-                  disabled={ad.inventory === 0}
-                  className={`font-semibold py-2 px-6 rounded-lg transition-colors ${
-                    ad.inventory > 0
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (ad.inventory > 0) onAdSelect(ad)
-                  }}
-                >
-                  {ad.inventory > 0 ? 'SELECT →' : 'SOLD OUT'}
-                </button>
+
+                {/* Quantity Input */}
+                {isSignedIn && ad.inventory > 0 && (
+                  <div className="mb-2">
+                    <label className="text-xs text-gray-400 block mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={ad.inventory}
+                      value={getQuantity(ad.id)}
+                      onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
+                      className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {/* Add to Cart Button */}
+                  {isSignedIn && ad.inventory > 0 && (
+                    <button
+                      disabled={addingToCart === ad.id}
+                      className="font-semibold py-2 px-4 rounded-lg transition-colors bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 flex items-center gap-2"
+                      onClick={(e) => handleAddToCart(ad, e)}
+                    >
+                      {addingToCart === ad.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ShoppingCart className="h-4 w-4" />
+                      )}
+                      Add to Cart
+                    </button>
+                  )}
+
+                  {/* Buy Now Button */}
+                  <button
+                    disabled={ad.inventory === 0}
+                    className={`font-semibold py-2 px-6 rounded-lg transition-colors ${
+                      ad.inventory > 0
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (ad.inventory > 0) onAdSelect(ad)
+                    }}
+                  >
+                    {ad.inventory > 0 ? 'Buy Now →' : 'SOLD OUT'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

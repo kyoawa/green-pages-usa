@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
+import { UserMenu } from '@/components/UserMenu'
+import { CartButton } from '@/components/CartButton'
 
 
 // US states topology URL
@@ -165,8 +167,13 @@ export default function ReactSimpleMapsHomepage() {
         </div>
         <nav className="flex space-x-8">
           <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
           <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
         </nav>
+        <div className="flex items-center gap-3">
+          <CartButton />
+          <UserMenu />
+        </div>
       </header>
 
       {/* Main Content */}

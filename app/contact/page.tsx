@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react'
 import { Mail, Phone, MapPin, Loader2 } from 'lucide-react'
+import { CartButton } from '@/components/CartButton'
+import { UserMenu } from '@/components/UserMenu'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -71,8 +73,13 @@ export default function ContactPage() {
         </div>
         <nav className="flex space-x-8">
           <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
           <a href="/contact" className="text-white font-semibold">CONTACT</a>
         </nav>
+        <div className="flex items-center gap-3">
+          <CartButton />
+          <UserMenu />
+        </div>
       </header>
 
       {/* Main Content */}

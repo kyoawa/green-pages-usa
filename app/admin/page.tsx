@@ -1,44 +1,14 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { Home, Package, Users, FileText, Settings, BarChart, Database, ArrowRight, Lock, Eye, EyeOff, LogOut } from 'lucide-react'
-
-const ADMIN_PASSWORD = "IGotFanuzzled" // Change this to whatever you want
+import { Package, FileText, Settings, Database, ArrowRight, LogOut } from 'lucide-react'
+import { useUser, SignOutButton } from '@clerk/nextjs'
 
 export default function AdminPage() {
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-
-  // Check if already authenticated on page load
-  useEffect(() => {
-    const authenticated = sessionStorage.getItem('admin_authenticated')
-    if (authenticated === 'true') {
-      setIsAuthenticated(true)
-    }
-  }, [])
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true)
-      sessionStorage.setItem('admin_authenticated', 'true')
-      setError('')
-    } else {
-      setError('Incorrect password')
-      setPassword('')
-    }
-  }
-
-  const handleLogout = () => {
-    setIsAuthenticated(false)
-    sessionStorage.removeItem('admin_authenticated')
-    setPassword('')
-  }
+  const { user, isLoaded } = useUser()
 
   const initializeData = async () => {
     setLoading(true)
@@ -53,84 +23,16 @@ export default function AdminPage() {
     }
   }
 
-  // Login form
-  if (!isAuthenticated) {
+  // Loading state
+  if (!isLoaded) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ backgroundColor: '#1f2937', padding: '32px', borderRadius: '8px', border: '1px solid #374151', width: '100%', maxWidth: '400px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px' }}>
-            <Lock style={{ height: '48px', width: '48px', color: '#22c55e' }} />
-          </div>
-          
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center', marginBottom: '32px' }}>Green Pages Admin</h1>
-          
-          <form onSubmit={handleLogin} style={{ marginBottom: '0' }}>
-            <div style={{ position: 'relative', marginBottom: '24px' }}>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                style={{
-                  width: '100%',
-                  backgroundColor: '#111827',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  padding: '12px 48px 12px 16px',
-                  color: '#fff',
-                  fontSize: '16px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#22c55e'}
-                onBlur={(e) => e.target.style.borderColor = '#374151'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#9ca3af',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            
-            {error && (
-              <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center', marginBottom: '16px' }}>{error}</div>
-            )}
-            
-            <button
-              type="submit"
-              style={{
-                width: '100%',
-                backgroundColor: '#22c55e',
-                color: '#000',
-                fontWeight: 'bold',
-                padding: '12px',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '16px'
-              }}
-            >
-              Login
-            </button>
-          </form>
-        </div>
+        <div style={{ color: '#22c55e', fontSize: '18px' }}>Loading...</div>
       </div>
     )
   }
 
-  // Your existing admin dashboard
+  // Admin dashboard
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', padding: '32px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -140,28 +42,31 @@ export default function AdminPage() {
             <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', color: '#22c55e' }}>
               Green Pages Admin
             </h1>
-            <p style={{ color: '#9ca3af' }}>Manage your dispensary advertising platform</p>
+            <p style={{ color: '#9ca3af' }}>
+              Manage your dispensary advertising platform | Logged in as {user?.emailAddresses[0]?.emailAddress || user?.username}
+            </p>
           </div>
-          
-          <button
-            onClick={handleLogout}
-            style={{
-              backgroundColor: '#ef4444',
-              color: '#fff',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
+
+          <SignOutButton>
+            <button
+              style={{
+                backgroundColor: '#ef4444',
+                color: '#fff',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </SignOutButton>
         </div>
 
         {/* Quick Stats */}
@@ -185,7 +90,33 @@ export default function AdminPage() {
 
         {/* Admin Sections */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          
+
+          {/* Customer Orders */}
+          <Link href="/admin/customers" style={{ textDecoration: 'none' }}>
+            <div style={{
+              backgroundColor: '#1f2937',
+              border: '1px solid #374151',
+              padding: '24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              height: '100%'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#22c55e'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <Package style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Customer Orders</h2>
+              </div>
+              <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
+                View all customer orders, track upload status, and download submitted files.
+              </p>
+              <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                View Orders <ArrowRight size={16} style={{ marginLeft: '4px' }} />
+              </div>
+            </div>
+          </Link>
+
           {/* Submissions Management */}
           <Link href="/admin/submissions" style={{ textDecoration: 'none' }}>
             <div style={{
@@ -201,10 +132,10 @@ export default function AdminPage() {
             onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
                 <FileText style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Submissions</h2>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Legacy Submissions</h2>
               </div>
               <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
-                View customer submissions, manage state visibility, and download uploaded files.
+                View old form submissions, manage state visibility, and download uploaded files.
               </p>
               <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                 View Submissions <ArrowRight size={16} style={{ marginLeft: '4px' }} />
@@ -226,7 +157,7 @@ export default function AdminPage() {
             onMouseEnter={(e) => e.currentTarget.style.borderColor = '#22c55e'}
             onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                <Package style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
+                <FileText style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
                 <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Ad Management</h2>
               </div>
               <p style={{ color: '#9ca3af', marginBottom: '16px' }}>

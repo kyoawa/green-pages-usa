@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, ScanCommand, PutCommand } from '@aws-sdk/lib-dynamodb'
 import { v4 as uuidv4 } from 'uuid'
+import { auth } from '@clerk/nextjs/server'
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION,
@@ -17,11 +18,17 @@ const docClient = DynamoDBDocumentClient.from(client)
 
 // GET all ads
 export async function GET() {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const command = new ScanCommand({
       TableName: 'green-pages-ads'
     })
-    
+
     const response = await docClient.send(command)
     return NextResponse.json(response.Items || [])
   } catch (error) {
@@ -33,10 +40,16 @@ export async function GET() {
 
 // POST new ad
 export async function POST(request: Request) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const { state, adType, title, price, inventory, totalSlots, description } = body
-    
+
     const newAd = {
       id: uuidv4(),
       state,
@@ -50,12 +63,12 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
-    
+
     const command = new PutCommand({
       TableName: 'green-pages-ads',
       Item: newAd
     })
-    
+
     await docClient.send(command)
     return NextResponse.json(newAd)
   } catch (error) {
@@ -66,12 +79,18 @@ export async function POST(request: Request) {
 
 // PUT update ad
 export async function PUT(request: Request) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const { id, title, price, inventory, totalSlots, description } = body
-    
+
     const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb')
-    
+
     const command = new UpdateCommand({
       TableName: 'green-pages-ads',
       Key: { id },
@@ -86,7 +105,7 @@ export async function PUT(request: Request) {
       },
       ReturnValues: 'ALL_NEW'
     })
-    
+
     const response = await docClient.send(command)
     return NextResponse.json(response.Attributes)
   } catch (error) {
@@ -97,21 +116,27 @@ export async function PUT(request: Request) {
 
 // DELETE ad
 export async function DELETE(request: Request) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    
+
     if (!id) {
       return NextResponse.json({ error: 'Ad ID required' }, { status: 400 })
     }
-    
+
     const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb')
-    
+
     const command = new DeleteCommand({
       TableName: 'green-pages-ads',
       Key: { id }
     })
-    
+
     await docClient.send(command)
     return NextResponse.json({ success: true })
   } catch (error) {

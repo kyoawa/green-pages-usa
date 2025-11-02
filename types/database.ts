@@ -33,7 +33,6 @@ export interface CustomerOrder {
   state_name: string
   ad_type: string
   ad_price: number // price in cents
-  tax_amount: number // tax in cents
   total_amount: number // total in cents
   payment_status: "pending" | "paid" | "failed"
   order_status: "pending" | "confirmed" | "processing" | "completed" | "cancelled"

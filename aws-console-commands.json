@@ -1,0 +1,76 @@
+{
+  "README": "Copy these JSON configurations into AWS Console when creating tables",
+
+  "TABLE_1_green-pages-carts": {
+    "step1": "Go to: https://console.aws.amazon.com/dynamodbv2/home?region=us-west-2#create-table",
+    "step2": "Fill in the form:",
+    "tableName": "green-pages-carts",
+    "partitionKey": {
+      "name": "userId",
+      "type": "String"
+    },
+    "sortKey": "None",
+    "tableSettings": "Default settings",
+    "readWriteCapacity": "On-demand",
+    "step3": "Click 'Create table'"
+  },
+
+  "TABLE_2_green-pages-reservations": {
+    "IMPORTANT": "First DELETE the existing green-pages-reservations table!",
+    "step1": "Delete old table: https://console.aws.amazon.com/dynamodbv2/home?region=us-west-2#tables",
+    "step2": "After deletion, create new: https://console.aws.amazon.com/dynamodbv2/home?region=us-west-2#create-table",
+    "tableName": "green-pages-reservations",
+    "partitionKey": {
+      "name": "reservationId",
+      "type": "String"
+    },
+    "sortKey": "None",
+    "tableSettings": "Default settings",
+    "readWriteCapacity": "On-demand",
+    "step3": "Click 'Create table'",
+    "step4_ADD_GSI": {
+      "instructions": "After table created, go to Indexes tab → Create index",
+      "partitionKey": "itemId (String)",
+      "sortKey": "expiresAt (Number)",
+      "indexName": "itemId-expiresAt-index",
+      "projectedAttributes": "All"
+    },
+    "step5_ENABLE_TTL": {
+      "instructions": "Go to Additional settings tab → Time to Live",
+      "ttlAttribute": "expiresAt",
+      "action": "Click Enable TTL"
+    }
+  },
+
+  "TABLE_3_green-pages-orders": {
+    "NOTE": "This table should already exist",
+    "step1": "Go to: https://console.aws.amazon.com/dynamodbv2/home?region=us-west-2#table?name=green-pages-orders",
+    "step2": "Click 'Indexes' tab → Create index",
+    "ADD_GSI": {
+      "partitionKey": "userId (String)",
+      "sortKey": "createdAt (String)",
+      "indexName": "userId-createdAt-index",
+      "projectedAttributes": "All"
+    },
+    "step3": "Click 'Create index'"
+  },
+
+  "TABLE_4_green-pages-saved-progress_OPTIONAL": {
+    "NOTE": "Only if you want checkout autosave feature",
+    "step1": "Go to: https://console.aws.amazon.com/dynamodbv2/home?region=us-west-2#create-table",
+    "tableName": "green-pages-saved-progress",
+    "partitionKey": {
+      "name": "userId",
+      "type": "String"
+    },
+    "sortKey": "None",
+    "tableSettings": "Default settings",
+    "readWriteCapacity": "On-demand",
+    "step2": "Click 'Create table'",
+    "step3_ENABLE_TTL": {
+      "instructions": "After created, go to Additional settings tab → Time to Live",
+      "ttlAttribute": "expiresAt",
+      "action": "Click Enable TTL"
+    }
+  }
+}
