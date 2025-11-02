@@ -419,7 +419,7 @@ function AdSelectionStep({
         <div className="w-24 h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent mx-auto mt-4 rounded-full" />
       </div>
 
-      <div className="grid gap-4 max-w-5xl mx-auto">
+      <div className="grid gap-4 max-w-5xl mx-auto px-4">
         {inventory.map((ad) => (
           <div
             key={ad.id}
@@ -429,7 +429,79 @@ function AdSelectionStep({
                 : "bg-[#0f172a] opacity-60"
             }`}
           >
-            <div className="flex items-center justify-between gap-6 p-5">
+            {/* Mobile Layout */}
+            <div className="md:hidden p-4">
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-white tracking-tight mb-2">{ad.title}</h3>
+                <p className="text-slate-400 text-sm mb-2">{ad.description}</p>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ad.inventory > 0 ? 'bg-green-500' : 'bg-slate-600'}`} />
+                  <span className="text-xs text-slate-500 font-medium">{ad.remaining}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-3xl font-bold text-green-500">
+                  ${ad.price.toLocaleString()}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isSignedIn && ad.inventory > 0 && (
+                    <>
+                      <input
+                        type="number"
+                        min="1"
+                        max={ad.inventory}
+                        value={getQuantity(ad.id)}
+                        onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
+                        placeholder="QTY"
+                        className="w-14 h-10 px-2 bg-black border-2 border-slate-700 rounded-xl text-white text-center text-sm font-bold focus:outline-none focus:border-green-500 transition-colors placeholder:text-slate-600"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        disabled={addingToCart === ad.id}
+                        className="w-10 h-10 rounded-xl bg-[#334155] hover:bg-[#475569] border-2 border-slate-700 text-white disabled:opacity-50 flex items-center justify-center transition-all duration-200"
+                        onClick={(e) => handleAddToCart(ad, e)}
+                        title="Add to Cart"
+                      >
+                        {addingToCart === ad.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ShoppingCart className="h-4 w-4" />
+                        )}
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    disabled={ad.inventory === 0}
+                    className={`w-10 h-10 rounded-xl transition-all duration-200 flex items-center justify-center ${
+                      ad.inventory > 0
+                        ? "bg-green-500 hover:bg-green-400 text-black shadow-lg shadow-green-500/30"
+                        : "bg-[#334155] text-slate-600 cursor-not-allowed"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (ad.inventory > 0) onAdSelect(ad)
+                    }}
+                    title={ad.inventory > 0 ? "Buy Now" : "Sold Out"}
+                  >
+                    {ad.inventory > 0 ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Layout */}
+            <div className="hidden md:flex items-center justify-between gap-6 p-5">
               {/* Left section - Title and Description */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-2xl font-bold text-white tracking-tight mb-1.5">{ad.title}</h3>
