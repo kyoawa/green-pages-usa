@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, CheckCircle, AlertCircle, Upload } from 'lucide-react'
@@ -28,7 +28,7 @@ interface Order {
   uploadStatus: { [itemId: string]: boolean }
 }
 
-export default function AccountOrdersPage() {
+function AccountOrdersContent() {
   const { isSignedIn, user } = useUser()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -242,5 +242,20 @@ export default function AccountOrdersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function AccountOrdersPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-green-400 mx-auto mb-4" />
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      </div>
+    }>
+      <AccountOrdersContent />
+    </Suspense>
   )
 }
