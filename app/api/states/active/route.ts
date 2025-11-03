@@ -20,7 +20,11 @@ export async function GET() {
       'OK': 'Oklahoma',
       'AL': 'Alabama',
       'HI': 'Hawaii',
-      'GA': 'Georgia'
+      'GA': 'Georgia',
+      'MA': 'Massachusetts',
+      'CT': 'Connecticut',
+      'LA': 'Louisiana',
+      'FL': 'Florida'
     }
     
     // Build array of active states only

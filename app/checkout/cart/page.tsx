@@ -171,12 +171,12 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
                     {item.state} • {item.adType}
                   </p>
                 </div>
-                <p className="text-white font-bold text-sm lg:text-base whitespace-nowrap">
+                <p className="text-white font-bold text-sm lg:text-base whitespace-nowrap font-display">
                   ${(item.price * item.quantity).toLocaleString()}
                 </p>
               </div>
               {item.quantity > 1 && (
-                <p className="text-gray-500 text-xs">
+                <p className="text-gray-500 text-xs font-display">
                   ${item.price.toLocaleString()} each
                 </p>
               )}
@@ -187,7 +187,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
         <div className="bg-gray-800 p-3 lg:p-4 rounded-md">
           <div className="flex justify-between items-center text-xs lg:text-sm text-gray-400 mb-1">
             <span>Subtotal</span>
-            <span>${cart.subtotal.toLocaleString()}</span>
+            <span className="font-display">${cart.subtotal.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -195,7 +195,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
       <div className="border-t border-gray-700 pt-4 lg:pt-6">
         <div className="flex justify-between items-center">
           <span className="text-lg lg:text-2xl font-bold text-green-400">TOTAL:</span>
-          <span className="text-lg lg:text-2xl font-bold text-green-400">
+          <span className="text-lg lg:text-2xl font-bold text-green-400 font-display">
             ${cart.total.toFixed(2)}
           </span>
         </div>
@@ -213,7 +213,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
         >
           <span className="text-lg font-semibold">Order Total</span>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-green-400">${cart.total.toFixed(2)}</span>
+            <span className="text-lg font-bold text-green-400 font-display">${cart.total.toFixed(2)}</span>
             {showMobileSummary ? <ChevronUp /> : <ChevronDown />}
           </div>
         </button>
@@ -336,7 +336,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
                   PROCESSING...
                 </div>
               ) : (
-                `COMPLETE ORDER $${cart.total.toFixed(2)}`
+                <>COMPLETE ORDER <span className="font-display">${cart.total.toFixed(2)}</span></>
               )}
             </button>
           </div>
@@ -358,7 +358,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
                 PROCESSING...
               </div>
             ) : (
-              `COMPLETE ORDER $${cart.total.toFixed(2)}`
+              <>COMPLETE ORDER <span className="font-display">${cart.total.toFixed(2)}</span></>
             )}
           </button>
         </div>

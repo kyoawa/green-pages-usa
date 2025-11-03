@@ -3,8 +3,8 @@
 
 @font-face {
   font-family: 'Champion';
-  src: url('/fonts/champion-liteweight-webfont.woff2') format('woff2');
-  font-weight: normal;
+  src: url('/fonts/Champion-Heviweight.woff') format('woff');
+  font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
@@ -133,11 +133,20 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Apply Champion font to all headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Champion', sans-serif;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
 }
 
 /* Font utility classes */
 .font-display {
   font-family: 'Champion', sans-serif;
+  font-weight: 900;
 }
 
 .font-body {

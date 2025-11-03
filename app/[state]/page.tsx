@@ -230,30 +230,51 @@ export default function DynamicStatePage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="flex items-center justify-between p-6 border-b border-gray-800">
+      <header className="flex items-center justify-between p-4 md:p-6 border-b border-gray-800">
         <div className="flex items-center space-x-2">
           <img
             src="/logo.svg"
             alt="Green Pages"
-            className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+            className="h-6 md:h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => router.push('/')}
           />
         </div>
-        <nav className="flex space-x-8">
-          <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
-          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
-          <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
+        <nav className="hidden md:flex space-x-4 lg:space-x-8">
+          <a href="/about" className="text-gray-300 hover:text-white text-sm lg:text-base">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white text-sm lg:text-base">MAGAZINE</a>
+          <a href="/contact" className="text-gray-300 hover:text-white text-sm lg:text-base">CONTACT</a>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <CartButton />
           <UserMenu />
         </div>
       </header>
 
       {/* Progress Bar */}
-      <div className="bg-gray-900 px-6 py-4">
+      <div className="bg-gray-900 px-3 py-3 sm:px-6 sm:py-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between text-sm">
+          {/* Mobile: Just step numbers */}
+          <div className="flex sm:hidden items-center justify-center gap-2">
+            {steps.map((_step, index) => (
+              <div key={index} className="flex items-center">
+                <div
+                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
+                    index <= currentStep
+                      ? "border-green-400 bg-green-400 text-black"
+                      : "border-gray-500 text-gray-500"
+                  }`}
+                >
+                  {index + 1}
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-8 h-0.5 mx-1 ${index < currentStep ? 'bg-green-400' : 'bg-gray-600'}`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Full step labels */}
+          <div className="hidden sm:flex items-center justify-between text-sm">
             {steps.map((step, index) => (
               <div
                 key={index}
@@ -345,12 +366,24 @@ function AdSelectionStep({
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({})
 
   const handleQuantityChange = (adId: string, value: string) => {
-    const numValue = parseInt(value) || 1
-    setQuantities(prev => ({ ...prev, [adId]: numValue }))
+    // Allow empty string for deletion, otherwise parse the number
+    if (value === '') {
+      setQuantities(prev => ({ ...prev, [adId]: 0 }))
+    } else {
+      const numValue = parseInt(value)
+      if (!isNaN(numValue) && numValue >= 0) {
+        setQuantities(prev => ({ ...prev, [adId]: numValue }))
+      }
+    }
   }
 
   const getQuantity = (adId: string) => {
-    return quantities[adId] || 1
+    // Return the quantity if it exists, otherwise default to 1
+    // If quantity is 0 (from deletion), show empty string
+    const qty = quantities[adId]
+    if (qty === undefined) return 1
+    if (qty === 0) return ''
+    return qty
   }
 
   const handleAddToCart = async (ad: AdData, e: React.MouseEvent) => {
@@ -361,7 +394,13 @@ function AdSelectionStep({
       return
     }
 
-    const quantity = getQuantity(ad.id)
+    const rawQuantity = getQuantity(ad.id)
+    const quantity = rawQuantity === '' || rawQuantity === 0 ? 1 : Number(rawQuantity)
+
+    if (quantity < 1) {
+      alert('Quantity must be at least 1')
+      return
+    }
 
     if (quantity > ad.inventory) {
       alert(`Only ${ad.inventory} slots available`)
@@ -441,7 +480,7 @@ function AdSelectionStep({
               </div>
 
               <div className="flex items-center justify-between gap-4">
-                <div className="text-3xl font-bold text-green-500">
+                <div className="text-3xl font-bold text-green-500 font-display">
                   ${ad.price.toLocaleString()}
                 </div>
 
@@ -516,7 +555,7 @@ function AdSelectionStep({
               <div className="flex items-center gap-6">
                 {/* Price - Left justified */}
                 <div className="text-left">
-                  <div className="text-4xl font-bold text-green-500">
+                  <div className="text-4xl font-bold text-green-500 font-display">
                     ${ad.price.toLocaleString()}
                   </div>
                 </div>
@@ -605,7 +644,7 @@ function OrderSummaryStep({ state, selectedAd }: { state: string, selectedAd: Ad
           <div className="border-t border-gray-700 pt-6">
             <h3 className="text-lg font-bold mb-2">Order Details:</h3>
             <p className="text-gray-400">{selectedAd.title}</p>
-            <p className="text-2xl font-bold text-green-400 mt-2">
+            <p className="text-2xl font-bold text-green-400 mt-2 font-display">
               ${selectedAd.price.toLocaleString()}
             </p>
           </div>

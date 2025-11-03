@@ -89,22 +89,22 @@ export default function MagazinePage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="flex items-center justify-between p-6 border-b border-gray-800">
+      <header className="flex items-center justify-between p-4 md:p-6 border-b border-gray-800">
         <div className="flex items-center space-x-2">
           <a href="/">
             <img
               src="/logo.svg"
               alt="Green Pages"
-              className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+              className="h-6 md:h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
             />
           </a>
         </div>
-        <nav className="flex space-x-8">
-          <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
-          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
-          <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
+        <nav className="hidden md:flex space-x-4 lg:space-x-8">
+          <a href="/about" className="text-gray-300 hover:text-white text-sm lg:text-base">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white text-sm lg:text-base">MAGAZINE</a>
+          <a href="/contact" className="text-gray-300 hover:text-white text-sm lg:text-base">CONTACT</a>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <CartButton />
           <UserMenu />
         </div>
@@ -162,38 +162,41 @@ export default function MagazinePage() {
         </div>
 
         {/* Controls */}
-        <div className="flex justify-center items-center gap-4 mb-8">
-          <button
-            onClick={prevPage}
-            disabled={currentPage === 0}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-full flex items-center gap-2 transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            Previous
-          </button>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full flex items-center gap-1.5 sm:gap-2 transition-colors text-sm sm:text-base"
+            >
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden xs:inline">Previous</span>
+              <span className="xs:hidden">Prev</span>
+            </button>
 
-          <div className="text-gray-400">
-            Page {currentPage + 1} of {totalPages}
+            <div className="text-gray-400 text-sm sm:text-base whitespace-nowrap">
+              {currentPage + 1} / {totalPages}
+            </div>
+
+            <button
+              onClick={nextPage}
+              disabled={currentPage >= totalPages - 1}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full flex items-center gap-1.5 sm:gap-2 transition-colors text-sm sm:text-base"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
           </div>
 
           <button
-            onClick={nextPage}
-            disabled={currentPage >= totalPages - 1}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-full flex items-center gap-2 transition-colors"
-          >
-            Next
-            <ChevronRight className="h-5 w-5" />
-          </button>
-
-          <button
             onClick={toggleFullscreen}
-            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-full transition-colors ml-4"
+            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2.5 sm:py-3 rounded-full transition-colors text-sm sm:text-base"
             title="Toggle Fullscreen"
           >
             {isFullscreen ? (
-              <Minimize2 className="h-5 w-5" />
+              <Minimize2 className="h-4 w-4 sm:h-5 sm:w-5" />
             ) : (
-              <Maximize2 className="h-5 w-5" />
+              <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5" />
             )}
           </button>
         </div>

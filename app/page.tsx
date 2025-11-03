@@ -132,45 +132,45 @@ export default function ReactSimpleMapsHomepage() {
         /* Glowing text animation for SELECT */
         @keyframes pulse-glow {
           0%, 100% {
-            text-shadow: 
-              0 0 10px #54f104,
-              0 0 20px #54f104,
-              0 0 30px #54f104,
-              0 0 40px #54f104;
+            text-shadow:
+              0 0 8px #54f104,
+              0 0 15px #54f104,
+              0 0 20px #54f104;
             opacity: 1;
           }
           50% {
-            text-shadow: 
+            text-shadow:
+              0 0 12px #54f104,
               0 0 20px #54f104,
-              0 0 30px #54f104,
-              0 0 40px #54f104,
-              0 0 50px #54f104,
-              0 0 75px #54f104;
+              0 0 25px #54f104,
+              0 0 30px #54f104;
             opacity: 0.95;
           }
         }
-        
+
         .glow-text {
           color: #54f104;
           animation: pulse-glow 2s ease-in-out infinite;
+          font-family: 'Champion', sans-serif;
+          font-weight: 900;
         }
       `}</style>
 
       {/* Header */}
-      <header className="flex items-center justify-between p-6 border-b border-gray-800">
+      <header className="flex items-center justify-between p-4 md:p-6 border-b border-gray-800">
         <div className="flex items-center space-x-2">
           <img
             src="/logo.svg"
             alt="Green Pages"
-            className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+            className="h-6 md:h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
           />
         </div>
-        <nav className="flex space-x-8">
-          <a href="/about" className="text-gray-300 hover:text-white">ABOUT</a>
-          <a href="/magazine" className="text-gray-300 hover:text-white">MAGAZINE</a>
-          <a href="/contact" className="text-gray-300 hover:text-white">CONTACT</a>
+        <nav className="hidden md:flex space-x-4 lg:space-x-8">
+          <a href="/about" className="text-gray-300 hover:text-white text-sm lg:text-base">ABOUT</a>
+          <a href="/magazine" className="text-gray-300 hover:text-white text-sm lg:text-base">MAGAZINE</a>
+          <a href="/contact" className="text-gray-300 hover:text-white text-sm lg:text-base">CONTACT</a>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <CartButton />
           <UserMenu />
         </div>
@@ -242,8 +242,8 @@ export default function ReactSimpleMapsHomepage() {
                   }}
                   className="bg-gray-800 hover:bg-green-700 text-white font-semibold py-4 px-3 rounded-lg transition-all duration-200 hover:scale-105 border border-gray-600 hover:border-green-500 group"
                 >
-                  <div className="text-lg font-bold">{state.code}</div>
-                  <div className="text-xs text-gray-400 group-hover:text-gray-300 mt-1">
+                  <div className="text-2xl font-bold mb-1">{state.code}</div>
+                  <div className="text-xs text-gray-400 group-hover:text-green-300 uppercase tracking-wide">
                     {state.name}
                   </div>
                 </button>
@@ -254,7 +254,7 @@ export default function ReactSimpleMapsHomepage() {
           {/* Info Section */}
           <div className="text-center">
             <p className="text-xs text-gray-500 max-w-2xl mx-auto">
-              Click on any highlighted state on the map or use the buttons above to view available advertising packages. 
+              Click on any highlighted state on the map or use the buttons above to view available advertising packages.
               Green states are currently accepting new advertisers.
             </p>
           </div>
