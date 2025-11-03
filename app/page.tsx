@@ -13,6 +13,7 @@ export default function ReactSimpleMapsHomepage() {
   const [activeStates, setActiveStates] = useState<Array<{code: string, name: string}>>([])
   const [loading, setLoading] = useState(true)
   const [hoveredState, setHoveredState] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     fetchActiveStates()
@@ -165,16 +166,47 @@ export default function ReactSimpleMapsHomepage() {
             className="h-6 md:h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
           />
         </div>
+
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex space-x-4 lg:space-x-8">
           <a href="/about" className="text-gray-300 hover:text-white text-sm lg:text-base">ABOUT</a>
           <a href="/magazine" className="text-gray-300 hover:text-white text-sm lg:text-base">MAGAZINE</a>
           <a href="/contact" className="text-gray-300 hover:text-white text-sm lg:text-base">CONTACT</a>
         </nav>
+
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-gray-300 hover:text-white p-2"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
+
           <CartButton />
           <UserMenu />
         </div>
       </header>
+
+      {/* Mobile Navigation Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-gray-900 border-b border-gray-800">
+          <nav className="flex flex-col p-4 space-y-3">
+            <a href="/about" className="text-gray-300 hover:text-white text-base py-2">ABOUT</a>
+            <a href="/magazine" className="text-gray-300 hover:text-white text-base py-2">MAGAZINE</a>
+            <a href="/contact" className="text-gray-300 hover:text-white text-base py-2">CONTACT</a>
+          </nav>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 p-6">
