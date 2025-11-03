@@ -1,10 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Roboto } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
-const roboto = Roboto({ 
+const roboto = Roboto({
   weight: ['300', '400', '500', '700'],
   subsets: ['latin'],
   variable: '--font-roboto'
@@ -29,7 +29,10 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Green Pages USA'
   },
-  applicationName: 'Green Pages USA',
+  applicationName: 'Green Pages USA'
+}
+
+export const viewport: Viewport = {
   themeColor: '#22c55e'
 }
 
