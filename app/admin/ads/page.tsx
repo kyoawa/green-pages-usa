@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from 'react'
-import { Package, DollarSign, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Package, DollarSign, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Settings } from 'lucide-react'
 
 interface Ad {
   id: string
@@ -43,6 +44,7 @@ const adTypes = [
 ]
 
 export default function AdminAdsPage() {
+  const router = useRouter()
   const [adsByState, setAdsByState] = useState<Record<string, Ad[]>>({})
   const [loading, setLoading] = useState(true)
   const [editingAd, setEditingAd] = useState<string | null>(null)
@@ -191,8 +193,8 @@ export default function AdminAdsPage() {
 
   // Calculate totals
   const totalAds = Object.values(adsByState).flat().length
-  const totalInventory = Object.values(adsByState).flat().reduce((sum, ad) => sum + ad.inventory, 0)
-  const totalRevenuePotential = Object.values(adsByState).flat().reduce((sum, ad) => sum + (ad.price * ad.inventory), 0)
+  const totalInventory = Object.values(adsByState).flat().reduce((sum, ad) => sum + (ad.inventory || 0), 0)
+  const totalRevenuePotential = Object.values(adsByState).flat().reduce((sum, ad) => sum + ((ad.price || 0) * (ad.inventory || 0)), 0)
 
   if (loading) {
     return (
@@ -559,6 +561,19 @@ export default function AdminAdsPage() {
                                 
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <button
+                                    onClick={() => router.push(`/admin/ads/schema/${ad.state}/${ad.adType}`)}
+                                    style={{
+                                      backgroundColor: 'transparent',
+                                      color: '#22c55e',
+                                      padding: '6px',
+                                      border: 'none',
+                                      cursor: 'pointer'
+                                    }}
+                                    title="Edit Upload Schema"
+                                  >
+                                    <Settings size={18} />
+                                  </button>
+                                  <button
                                     onClick={() => {
                                       setEditingAd(ad.id)
                                       setEditForm(ad)
@@ -570,7 +585,7 @@ export default function AdminAdsPage() {
                                       border: 'none',
                                       cursor: 'pointer'
                                     }}
-                                    title="Edit"
+                                    title="Edit Ad Details"
                                   >
                                     <Edit size={18} />
                                   </button>

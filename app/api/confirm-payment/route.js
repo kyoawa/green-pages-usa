@@ -2,15 +2,16 @@ import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { getCart, clearCart, calculateCartTotals } from "@/lib/cart"
 import { completeReservation } from "@/lib/reservations"
-import { createOrder } from "@/lib/orders"
+import { createOrder, initializeSlotSubmissions } from "@/lib/orders"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export async function POST(request) {
-  const { paymentIntentId } = await request.json()
+  const { paymentIntentId, customerData } = await request.json()
 
   console.log('=== CONFIRM PAYMENT START ===')
   console.log('Payment Intent ID:', paymentIntentId)
+  console.log('Customer Data:', customerData)
 
   try {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
@@ -122,37 +123,47 @@ export async function POST(request) {
 
         // Create order in database
         try {
+          const items = fullCart ? fullCart.items.map(item => ({
+            itemId: item.itemId,
+            state: item.state,
+            adType: item.adType,
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+            reservationId: item.reservationId
+          })) : cartItems.map(item => ({
+            itemId: `${item.state}#${item.adType}`,
+            state: item.state,
+            adType: item.adType,
+            title: item.title || 'Unknown',
+            price: item.price || 0,
+            quantity: item.quantity || 1,
+            reservationId: item.reservationId || ''
+          }))
+
+          // Initialize slot submissions for each item
+          const slotSubmissions = {}
+          items.forEach(item => {
+            const itemKey = item.itemId.replace(/[#]/g, "_")
+            slotSubmissions[itemKey] = initializeSlotSubmissions(item.itemId, item.quantity)
+          })
+
           const orderData = {
             orderId: paymentIntentId,
             userId: userId,
             customerEmail: paymentIntent.receipt_email || paymentIntent.metadata.customerEmail || 'unknown',
             customerName: paymentIntent.metadata.customerName || 'Unknown',
             customerPhone: paymentIntent.metadata.customerPhone || '',
-            items: fullCart ? fullCart.items.map(item => ({
-              itemId: item.itemId,
-              state: item.state,
-              adType: item.adType,
-              title: item.title,
-              price: item.price,
-              quantity: item.quantity,
-              reservationId: item.reservationId
-            })) : cartItems.map(item => ({
-              itemId: `${item.state}#${item.adType}`,
-              state: item.state,
-              adType: item.adType,
-              title: item.title || 'Unknown',
-              price: item.price || 0,
-              quantity: item.quantity || 1,
-              reservationId: item.reservationId || ''
-            })),
+            items: items,
             subtotal: fullCart ? fullCart.subtotal : (paymentIntent.amount / 100),
             total: paymentIntent.amount / 100,
             createdAt: new Date().toISOString(),
-            uploadStatus: {}
+            uploadStatus: {},
+            slotSubmissions: slotSubmissions
           }
 
           await createOrder(orderData)
-          console.log('Order created successfully:', paymentIntentId)
+          console.log('Order created successfully with slot tracking:', paymentIntentId)
         } catch (error) {
           console.error('Failed to create order record:', error)
           // Don't fail the whole payment, just log it
@@ -227,6 +238,49 @@ export async function POST(request) {
         // If response is OK, read as JSON
         const result = await updateResponse.json()
         console.log('Inventory update successful:', result)
+
+        // Create order in database for single item checkout
+        try {
+          const { state, adType, adTitle, userId, quantity } = paymentIntent.metadata
+          const itemQuantity = parseInt(quantity) || 1
+
+          const itemId = `${state}#${adType}`
+          const items = [{
+            itemId: itemId,
+            state: state,
+            adType: adType,
+            title: adTitle || 'Unknown',
+            price: paymentIntent.amount / 100 / itemQuantity,
+            quantity: itemQuantity,
+            reservationId: ''
+          }]
+
+          // Initialize slot submissions
+          const itemKey = itemId.replace(/[#]/g, "_")
+          const slotSubmissions = {
+            [itemKey]: initializeSlotSubmissions(itemId, itemQuantity)
+          }
+
+          const orderData = {
+            orderId: paymentIntentId,
+            userId: userId || 'guest',
+            customerEmail: customerData?.email || paymentIntent.receipt_email || 'unknown',
+            customerName: customerData?.fullName || 'Unknown',
+            customerPhone: customerData?.phone || '',
+            items: items,
+            subtotal: paymentIntent.amount / 100,
+            total: paymentIntent.amount / 100,
+            createdAt: new Date().toISOString(),
+            uploadStatus: {},
+            slotSubmissions: slotSubmissions
+          }
+
+          await createOrder(orderData)
+          console.log('Single item order created successfully:', paymentIntentId)
+        } catch (error) {
+          console.error('Failed to create single item order:', error)
+          // Don't fail the payment, just log it
+        }
 
         return NextResponse.json({
           success: true,

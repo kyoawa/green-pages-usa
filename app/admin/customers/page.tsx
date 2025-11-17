@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Download, ArrowLeft, RefreshCw, CheckCircle, AlertCircle, Package } from 'lucide-react'
+import { Download, ArrowLeft, RefreshCw, CheckCircle, AlertCircle, Package, Trash2 } from 'lucide-react'
 
 interface OrderItem {
   itemId: string
@@ -31,6 +31,7 @@ export default function AdminCustomersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOrders()
@@ -63,12 +64,112 @@ export default function AdminCustomersPage() {
 
   const getItemUploadStatus = (order: Order, itemId: string): boolean => {
     const sanitizedItemId = itemId.replace(/[#]/g, "_")
+
+    // Check new slot-based tracking first
+    if (order.slotSubmissions?.[sanitizedItemId]) {
+      const slots = order.slotSubmissions[sanitizedItemId]
+      // Check if all slots are completed
+      const allSlotsCompleted = slots.every((slot: any) => slot.status === 'completed')
+      return allSlotsCompleted
+    }
+
+    // Fallback to old uploadStatus for backward compatibility
     return order.uploadStatus?.[sanitizedItemId] || false
   }
 
-  const handleDownloadUploads = (orderId: string) => {
-    // TODO: Implement download functionality for uploaded files
-    alert(`Download functionality for order ${orderId} - Coming soon!`)
+  const handleDeleteOrder = async (orderId: string, customerName: string) => {
+    // Step 1: Set the ID to show confirmation
+    if (deletingOrderId !== orderId) {
+      setDeletingOrderId(orderId)
+      return
+    }
+
+    // Step 2: Actually delete
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        alert(`Order for ${customerName} deleted successfully`)
+        fetchOrders()
+        setDeletingOrderId(null)
+      } else {
+        alert('Failed to delete order')
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error)
+      alert('Error deleting order')
+    }
+  }
+
+  const handleDownloadUploads = async (orderId: string) => {
+    try {
+      // Fetch all submissions for this order
+      const response = await fetch(`/api/admin/submissions?orderId=${orderId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch submissions')
+      }
+
+      const data = await response.json()
+      const submissions = data.submissions || []
+
+      if (submissions.length === 0) {
+        alert('No uploads found for this order')
+        return
+      }
+
+      // Create a CSV with all submission data and file links
+      const csvRows = []
+
+      // Header
+      csvRows.push([
+        'Order ID',
+        'Item ID',
+        'Slot',
+        'State',
+        'Ad Type',
+        'Customer Name',
+        'Customer Email',
+        'Submitted At',
+        'Field Data',
+        'File URLs'
+      ].join(','))
+
+      // Data rows
+      submissions.forEach((sub: any) => {
+        // Support both fieldData (new) and formData (old) for backward compatibility
+        const fieldDataStr = JSON.stringify(sub.fieldData || sub.formData || {}).replace(/"/g, '""')
+        const fileUrlsStr = JSON.stringify(sub.fileUrls || {}).replace(/"/g, '""')
+
+        csvRows.push([
+          sub.orderId || '',
+          sub.itemId || '',
+          sub.slotNumber || '',
+          sub.state || '',
+          sub.adType || '',
+          sub.customerName || '',
+          sub.customerEmail || '',
+          sub.submittedAt || '',
+          `"${fieldDataStr}"`,
+          `"${fileUrlsStr}"`
+        ].join(','))
+      })
+
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `order_${orderId}_uploads_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+
+      alert(`Downloaded ${submissions.length} submission(s) for order ${orderId}`)
+    } catch (error) {
+      console.error('Error downloading uploads:', error)
+      alert('Failed to download uploads. Please try again.')
+    }
   }
 
   // Calculate stats
@@ -336,7 +437,7 @@ export default function AdminCustomersPage() {
 
                         {/* Actions */}
                         {allItemsUploaded && (
-                          <div style={{ marginTop: '16px' }}>
+                          <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
                             <button
                               onClick={() => handleDownloadUploads(order.orderId)}
                               style={{
@@ -350,12 +451,33 @@ export default function AdminCustomersPage() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                width: '100%',
+                                flex: 1,
                                 justifyContent: 'center'
                               }}
                             >
                               <Download size={16} />
                               Download All Uploads
+                            </button>
+                            <button
+                              onClick={() => handleDeleteOrder(order.orderId, order.customerName)}
+                              style={{
+                                backgroundColor: deletingOrderId === order.orderId ? '#dc2626' : 'transparent',
+                                color: deletingOrderId === order.orderId ? '#fff' : '#ef4444',
+                                padding: '10px 16px',
+                                borderRadius: '6px',
+                                border: deletingOrderId === order.orderId ? 'none' : '2px solid #ef4444',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                flex: 1,
+                                justifyContent: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Trash2 size={16} />
+                              {deletingOrderId === order.orderId ? 'Click to Confirm' : 'Delete Order'}
                             </button>
                           </div>
                         )}

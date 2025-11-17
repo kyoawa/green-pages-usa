@@ -113,7 +113,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
         })
 
         if (response.ok) {
-          // Redirect to upload requirements page
+          // Redirect to upload page with payment intent
           router.push(`/upload/cart?paymentIntentId=${paymentIntent.id}`)
         } else {
           setMessage('Payment succeeded but there was an issue updating inventory. Please contact support.')

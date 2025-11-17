@@ -132,10 +132,10 @@ export default function AdminPage() {
             onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
                 <FileText style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Legacy Submissions</h2>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Upload Submissions</h2>
               </div>
               <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
-                View old form submissions, manage state visibility, and download uploaded files.
+                View all customer upload submissions, filter by state/ad type, and export to CSV.
               </p>
               <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                 View Submissions <ArrowRight size={16} style={{ marginLeft: '4px' }} />
@@ -191,6 +191,32 @@ export default function AdminPage() {
               </p>
               <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                 Manage States <ArrowRight size={16} style={{ marginLeft: '4px' }} />
+              </div>
+            </div>
+          </Link>
+
+          {/* Schema Templates */}
+          <Link href="/admin/templates" style={{ textDecoration: 'none' }}>
+            <div style={{
+              backgroundColor: '#1f2937',
+              border: '1px solid #374151',
+              padding: '24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              height: '100%'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#22c55e'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <FileText style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Schema Templates</h2>
+              </div>
+              <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
+                View and manage reusable upload schema templates for ad types.
+              </p>
+              <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                Manage Templates <ArrowRight size={16} style={{ marginLeft: '4px' }} />
               </div>
             </div>
           </Link>

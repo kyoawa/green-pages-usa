@@ -18,21 +18,27 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  console.log('🔍 [API] GET /api/admin/ads/[id] called with id:', params.id)
   try {
     const command = new GetCommand({
       TableName: 'green-pages-ads',
       Key: { id: params.id }
     })
-    
+
+    console.log('📡 [API] Querying DynamoDB for ad:', params.id)
     const response = await docClient.send(command)
-    
+
+    console.log('📦 [API] DynamoDB response:', response.Item ? 'Item found' : 'Item not found')
+
     if (!response.Item) {
+      console.log('❌ [API] Ad not found, returning 404')
       return NextResponse.json({ error: 'Ad not found' }, { status: 404 })
     }
-    
+
+    console.log('✅ [API] Returning ad data with uploadSchema:', response.Item.uploadSchema ? 'present' : 'missing')
     return NextResponse.json(response.Item)
   } catch (error) {
-    console.error('Error fetching ad:', error)
+    console.error('💥 [API] Error fetching ad:', error)
     return NextResponse.json({ error: 'Failed to fetch ad' }, { status: 500 })
   }
 }
@@ -69,6 +75,47 @@ export async function PUT(
   }
 }
 
+// PATCH ad (for partial updates like uploadSchema)
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+
+    // Build dynamic update expression
+    const updateExpressions: string[] = []
+    const expressionAttributeValues: Record<string, any> = {}
+
+    if (body.uploadSchema !== undefined) {
+      updateExpressions.push('uploadSchema = :uploadSchema')
+      expressionAttributeValues[':uploadSchema'] = body.uploadSchema
+    }
+
+    if (updateExpressions.length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    // Always update the updatedAt timestamp
+    updateExpressions.push('updatedAt = :updatedAt')
+    expressionAttributeValues[':updatedAt'] = new Date().toISOString()
+
+    const command = new UpdateCommand({
+      TableName: 'green-pages-ads',
+      Key: { id: params.id },
+      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: 'ALL_NEW'
+    })
+
+    const response = await docClient.send(command)
+    return NextResponse.json(response.Attributes)
+  } catch (error) {
+    console.error('Error updating ad:', error)
+    return NextResponse.json({ error: 'Failed to update ad' }, { status: 500 })
+  }
+}
+
 // DELETE ad
 export async function DELETE(
   request: Request,
@@ -79,7 +126,7 @@ export async function DELETE(
       TableName: 'green-pages-ads',
       Key: { id: params.id }
     })
-    
+
     await docClient.send(command)
     return NextResponse.json({ success: true, message: 'Ad deleted successfully' })
   } catch (error) {

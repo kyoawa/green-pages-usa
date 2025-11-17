@@ -15,6 +15,14 @@ interface OrderItem {
   reservationId: string
 }
 
+interface SlotSubmission {
+  slotNumber: number
+  submissionId: string | null
+  status: 'pending' | 'completed'
+  submittedAt?: string
+  lastEditedAt?: string
+}
+
 interface Order {
   orderId: string
   userId: string
@@ -26,6 +34,7 @@ interface Order {
   total: number
   createdAt: string
   uploadStatus: { [itemId: string]: boolean }
+  slotSubmissions?: { [itemId: string]: SlotSubmission[] }
 }
 
 function AccountOrdersContent() {
@@ -35,6 +44,8 @@ function AccountOrdersContent() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [showPaymentSuccessMessage, setShowPaymentSuccessMessage] = useState(false)
+  const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -46,6 +57,19 @@ function AccountOrdersContent() {
     if (searchParams.get('uploaded') === 'true') {
       setShowSuccessMessage(true)
       setTimeout(() => setShowSuccessMessage(false), 5000)
+    }
+
+    // Show payment success message if coming from checkout
+    if (searchParams.get('uploaded') === 'false') {
+      setShowPaymentSuccessMessage(true)
+      const orderId = searchParams.get('orderId')
+      if (orderId) {
+        setHighlightOrderId(orderId)
+      }
+      setTimeout(() => {
+        setShowPaymentSuccessMessage(false)
+        setHighlightOrderId(null)
+      }, 10000)
     }
 
     fetchOrders()
@@ -69,11 +93,45 @@ function AccountOrdersContent() {
 
   const getItemUploadStatus = (order: Order, itemId: string): boolean => {
     const sanitizedItemId = itemId.replace(/[#]/g, "_")
+
+    // Check new slot-based tracking first
+    if (order.slotSubmissions?.[sanitizedItemId]) {
+      const slots = order.slotSubmissions[sanitizedItemId]
+      // Check if all slots are completed
+      const allSlotsCompleted = slots.every((slot: SlotSubmission) => slot.status === 'completed')
+      return allSlotsCompleted
+    }
+
+    // Fallback to old uploadStatus for backward compatibility
     return order.uploadStatus?.[sanitizedItemId] || false
   }
 
-  const handleUploadClick = (orderId: string) => {
-    router.push(`/upload/cart?paymentIntentId=${orderId}`)
+  const getSlotCompletionForItem = (order: Order, item: OrderItem): { completed: number, total: number } => {
+    const sanitizedItemId = item.itemId.replace(/[#]/g, "_")
+    const slots = order.slotSubmissions?.[sanitizedItemId] || []
+
+    if (slots.length === 0) {
+      // Legacy: use old uploadStatus
+      return {
+        completed: getItemUploadStatus(order, item.itemId) ? item.quantity : 0,
+        total: item.quantity
+      }
+    }
+
+    return {
+      completed: slots.filter(s => s.status === 'completed').length,
+      total: item.quantity
+    }
+  }
+
+  const handleUploadClick = (orderId: string, itemId?: string) => {
+    if (itemId) {
+      // Encode the itemId to handle special characters like #
+      const encodedItemId = encodeURIComponent(itemId)
+      router.push(`/upload/order/${orderId}/${encodedItemId}`)
+    } else {
+      router.push(`/upload/cart?paymentIntentId=${orderId}`)
+    }
   }
 
   if (loading) {
@@ -92,11 +150,24 @@ function AccountOrdersContent() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold mb-8 tracking-wider">YOUR ORDERS</h1>
 
-        {/* Success Message */}
+        {/* Upload Success Message */}
         {showSuccessMessage && (
           <div className="mb-6 p-4 bg-green-600/20 border-2 border-green-500 rounded-md flex items-center">
             <CheckCircle className="h-5 w-5 text-green-400 mr-3" />
             <p className="text-green-400">Upload completed successfully! Thank you.</p>
+          </div>
+        )}
+
+        {/* Payment Success Message */}
+        {showPaymentSuccessMessage && (
+          <div className="mb-6 p-4 bg-blue-600/20 border-2 border-blue-500 rounded-md">
+            <div className="flex items-center mb-2">
+              <CheckCircle className="h-5 w-5 text-blue-400 mr-3" />
+              <p className="text-blue-400 font-bold">Payment Successful!</p>
+            </div>
+            <p className="text-gray-300 text-sm">
+              Your order has been placed. Please upload the required information for each item below.
+            </p>
           </div>
         )}
 
@@ -113,15 +184,27 @@ function AccountOrdersContent() {
         ) : (
           <div className="space-y-6">
             {orders.map((order) => {
-              const allItemsUploaded = order.items.every(item =>
-                getItemUploadStatus(order, item.itemId)
-              )
-              const uploadedCount = order.items.filter(item =>
-                getItemUploadStatus(order, item.itemId)
-              ).length
+              // Check if all items have all slots completed
+              const allItemsUploaded = order.items.every(item => {
+                const slotCompletion = getSlotCompletionForItem(order, item)
+                return slotCompletion.completed === slotCompletion.total
+              })
+              const uploadedCount = order.items.filter(item => {
+                const slotCompletion = getSlotCompletionForItem(order, item)
+                return slotCompletion.completed === slotCompletion.total
+              }).length
+
+              const isHighlighted = highlightOrderId === order.orderId
 
               return (
-                <div key={order.orderId} className="bg-gray-900 rounded-lg p-6 border-2 border-gray-700">
+                <div
+                  key={order.orderId}
+                  className={`bg-gray-900 rounded-lg p-6 border-2 transition-all duration-300 ${
+                    isHighlighted
+                      ? 'border-blue-500 shadow-lg shadow-blue-500/20'
+                      : 'border-gray-700'
+                  }`}
+                >
                   {/* Order Header */}
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 pb-4 border-b border-gray-700">
                     <div>
@@ -182,28 +265,41 @@ function AccountOrdersContent() {
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-gray-300 mb-3">Items Ordered:</h3>
                     {order.items.map((item, index) => {
-                      const isUploaded = getItemUploadStatus(order, item.itemId)
+                      const slotCompletion = getSlotCompletionForItem(order, item)
+                      const allSlotsComplete = slotCompletion.completed === slotCompletion.total
 
                       return (
                         <div key={index} className="bg-gray-800 p-4 rounded-md">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
+                          <div className="flex items-start justify-between flex-wrap gap-3">
+                            <div className="flex-1 min-w-[200px]">
                               <div className="flex items-center mb-1">
                                 <p className="text-white font-medium">
                                   {item.title} {item.quantity > 1 && `× ${item.quantity}`}
                                 </p>
-                                {isUploaded && (
+                                {allSlotsComplete && (
                                   <CheckCircle className="h-4 w-4 text-green-400 ml-2" />
                                 )}
                               </div>
                               <p className="text-gray-400 text-sm">
                                 {item.state} • {item.adType}
                               </p>
-                              <p className="text-gray-500 text-xs mt-1">
-                                Item ID: {item.itemId}
-                              </p>
+                              {item.quantity > 1 && (
+                                <div className="mt-2">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-gray-500">
+                                      Slot Progress: {slotCompletion.completed} / {slotCompletion.total}
+                                    </span>
+                                    <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden max-w-[120px]">
+                                      <div
+                                        className="h-full bg-green-500 transition-all duration-300"
+                                        style={{ width: `${(slotCompletion.completed / slotCompletion.total) * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <div className="text-right ml-4">
+                            <div className="text-right ml-4 flex flex-col items-end gap-2">
                               <p className="text-white font-bold">
                                 ${(item.price * item.quantity).toLocaleString()}
                               </p>
@@ -212,14 +308,18 @@ function AccountOrdersContent() {
                                   ${item.price.toLocaleString()} each
                                 </p>
                               )}
-                              {isUploaded ? (
-                                <span className="inline-block mt-2 text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
-                                  Uploaded
+                              {allSlotsComplete ? (
+                                <span className="inline-block text-xs text-green-400 bg-green-400/10 px-3 py-1 rounded-full">
+                                  ✓ Complete
                                 </span>
                               ) : (
-                                <span className="inline-block mt-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-                                  Pending
-                                </span>
+                                <button
+                                  onClick={() => handleUploadClick(order.orderId, item.itemId)}
+                                  className="text-xs bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-3 py-1 rounded-full transition-colors flex items-center gap-1"
+                                >
+                                  <Upload className="h-3 w-3" />
+                                  Upload {slotCompletion.completed > 0 ? 'Remaining' : 'Now'}
+                                </button>
                               )}
                             </div>
                           </div>

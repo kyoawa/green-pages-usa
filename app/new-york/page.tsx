@@ -58,18 +58,21 @@ export default function NewYorkPage() {
   const handlePaymentSuccess = async (paymentIntentId: string, customerData: {email: string, fullName: string, phone: string}) => {
     try {
       setPaymentProcessing(true)
-      
+
       setCustomerInfo(customerData)
-      
+
       const response = await fetch('/api/confirm-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentIntentId })
+        body: JSON.stringify({
+          paymentIntentId,
+          customerData
+        })
       })
 
       if (response.ok) {
-        await fetchInventory()
-        setCurrentStep(2)
+        // Redirect to the upload page with the payment intent
+        router.push(`/upload/cart?paymentIntentId=${paymentIntentId}`)
       } else {
         alert('Payment succeeded but there was an issue updating inventory. Please contact support.')
       }

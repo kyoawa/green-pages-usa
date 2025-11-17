@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const { state, adType, title, price, inventory, totalSlots, description } = body
 
     const newAd = {
-      id: uuidv4(),
+      id: `${state}#${adType}`,
       state,
       adType,
       title,

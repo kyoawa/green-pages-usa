@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { auth } from '@clerk/nextjs/server'
 import { getOrder } from "@/lib/orders"
 
 export async function GET(
@@ -6,14 +7,27 @@ export async function GET(
   { params }: { params: { orderId: string } }
 ) {
   try {
+    const { userId } = await auth()
     const { orderId } = params
-
     const order = await getOrder(orderId)
 
     if (!order) {
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
+      )
+    }
+
+    // Allow access if:
+    // 1. User is authenticated and owns the order
+    // 2. Order is a guest order (no userId or userId is 'guest')
+    const isGuestOrder = !order.userId || order.userId === 'guest'
+    const isOwner = userId && order.userId === userId
+
+    if (!isGuestOrder && !isOwner) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
       )
     }
 

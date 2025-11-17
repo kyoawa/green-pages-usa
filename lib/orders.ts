@@ -22,6 +22,14 @@ export interface OrderItem {
   reservationId: string
 }
 
+export interface SlotSubmission {
+  slotNumber: number // 1-based index (1, 2, 3, etc.)
+  submissionId: string | null // ID in submissions table
+  status: 'pending' | 'completed' // Whether this slot has been submitted
+  submittedAt?: string
+  lastEditedAt?: string
+}
+
 export interface Order {
   orderId: string // Payment Intent ID
   userId: string
@@ -32,7 +40,8 @@ export interface Order {
   subtotal: number
   total: number
   createdAt: string
-  uploadStatus: { [itemId: string]: boolean } // Track which items have been uploaded
+  uploadStatus: { [itemId: string]: boolean } // Track which items have been uploaded (deprecated)
+  slotSubmissions?: { [itemId: string]: SlotSubmission[] } // Track per-slot submissions for each item
 }
 
 /**
@@ -138,4 +147,117 @@ export function isOrderFullyUploaded(order: Order): boolean {
   }
 
   return true
+}
+
+/**
+ * Initialize slot submissions for an order item
+ */
+export function initializeSlotSubmissions(itemId: string, quantity: number): SlotSubmission[] {
+  const slots: SlotSubmission[] = []
+  for (let i = 1; i <= quantity; i++) {
+    slots.push({
+      slotNumber: i,
+      submissionId: null,
+      status: 'pending'
+    })
+  }
+  return slots
+}
+
+/**
+ * Update slot submission status
+ */
+export async function updateSlotSubmission(
+  orderId: string,
+  itemId: string,
+  slotNumber: number,
+  submissionId: string
+): Promise<void> {
+  try {
+    const order = await getOrder(orderId)
+    if (!order) {
+      throw new Error("Order not found")
+    }
+
+    const itemKey = itemId.replace(/[#]/g, "_")
+
+    // Initialize slotSubmissions if it doesn't exist
+    if (!order.slotSubmissions) {
+      order.slotSubmissions = {}
+    }
+
+    // Initialize slots for this item if they don't exist
+    if (!order.slotSubmissions[itemKey]) {
+      const item = order.items.find(i => i.itemId === itemId)
+      if (!item) {
+        throw new Error("Item not found in order")
+      }
+      order.slotSubmissions[itemKey] = initializeSlotSubmissions(itemId, item.quantity)
+    }
+
+    // Find and update the specific slot
+    const slotIndex = order.slotSubmissions[itemKey].findIndex(s => s.slotNumber === slotNumber)
+    if (slotIndex === -1) {
+      throw new Error("Slot not found")
+    }
+
+    const now = new Date().toISOString()
+    order.slotSubmissions[itemKey][slotIndex] = {
+      slotNumber,
+      submissionId,
+      status: 'completed',
+      submittedAt: order.slotSubmissions[itemKey][slotIndex].submittedAt || now,
+      lastEditedAt: now
+    }
+
+    // Update in DynamoDB
+    const command = new UpdateCommand({
+      TableName: ORDERS_TABLE,
+      Key: { orderId },
+      UpdateExpression: "SET slotSubmissions.#itemKey = :slots",
+      ExpressionAttributeNames: {
+        "#itemKey": itemKey
+      },
+      ExpressionAttributeValues: {
+        ":slots": order.slotSubmissions[itemKey]
+      }
+    })
+
+    await docClient.send(command)
+  } catch (error) {
+    console.error("Error updating slot submission:", error)
+    throw error
+  }
+}
+
+/**
+ * Get slot completion status for an order
+ */
+export function getSlotCompletionStatus(order: Order): {
+  totalSlots: number
+  completedSlots: number
+  pendingSlots: number
+  percentComplete: number
+} {
+  let totalSlots = 0
+  let completedSlots = 0
+
+  for (const item of order.items) {
+    totalSlots += item.quantity
+
+    const itemKey = item.itemId.replace(/[#]/g, "_")
+    const slots = order.slotSubmissions?.[itemKey] || []
+
+    completedSlots += slots.filter(s => s.status === 'completed').length
+  }
+
+  const pendingSlots = totalSlots - completedSlots
+  const percentComplete = totalSlots > 0 ? Math.round((completedSlots / totalSlots) * 100) : 0
+
+  return {
+    totalSlots,
+    completedSlots,
+    pendingSlots,
+    percentComplete
+  }
 }
