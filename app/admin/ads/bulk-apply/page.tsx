@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Check, Copy, Loader2 } from 'lucide-react'
 import type { UploadSchema } from '@/lib/types'
@@ -18,7 +18,7 @@ interface StateInfo {
   name: string
 }
 
-export default function BulkApplySchemaPage() {
+function BulkApplyContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [schema, setSchema] = useState<UploadSchema | null>(null)
@@ -341,5 +341,18 @@ export default function BulkApplySchemaPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+
+export default function BulkApplySchemaPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-green-400 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    }>
+      <BulkApplyContent />
+    </Suspense>
   )
 }
