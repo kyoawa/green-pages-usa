@@ -106,7 +106,8 @@ export default function DynamicStatePage() {
   const params = useParams()
   const router = useRouter()
   const stateParam = params.state as string
-  
+  const { isSignedIn } = useUser()
+
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedAd, setSelectedAd] = useState<AdData | null>(null)
   const [inventory, setInventory] = useState<AdData[]>([])
@@ -183,8 +184,8 @@ export default function DynamicStatePage() {
     if (ad.inventory > 0) {
       // Check if user is signed in
       if (!isSignedIn) {
-        // Redirect to sign-in page with return URL
-        window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.pathname + `?ad=${ad.id}`)}`
+        // Redirect to sign-up page with return URL
+        window.location.href = `/sign-up?redirect_url=${encodeURIComponent(window.location.pathname + `?ad=${ad.id}`)}`
         return
       }
 
@@ -237,6 +238,33 @@ export default function DynamicStatePage() {
   }
 
   if (inventory.length === 0) {
+    // If user is not signed in, show account creation prompt
+    if (!isSignedIn) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-black">
+          <div className="text-center text-white max-w-md px-6">
+            <h1 className="text-3xl font-bold mb-4 tracking-wide">CREATE AN ACCOUNT TO PURCHASE</h1>
+            <p className="text-gray-400 mb-8">You need to create an account to view and purchase advertising space.</p>
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={() => window.location.href = `/sign-up?redirect_url=${encodeURIComponent(window.location.pathname)}`}
+                className="bg-green-500 hover:bg-green-400 text-black font-bold py-4 px-8 rounded-full transition-colors text-lg"
+              >
+                CREATE ACCOUNT
+              </button>
+              <button
+                onClick={() => window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Already have an account? Sign in
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // If user is signed in but no inventory, show the regular message
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-center text-white">
@@ -415,12 +443,6 @@ function AdSelectionStep({
   const handleAddToCart = async (ad: AdData, e: React.MouseEvent) => {
     e.stopPropagation()
 
-    if (!isSignedIn) {
-      // Redirect to sign-in page with return URL
-      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`
-      return
-    }
-
     const rawQuantity = getQuantity(ad.id)
     const quantity = rawQuantity === '' || rawQuantity === 0 ? 1 : Number(rawQuantity)
 
@@ -436,23 +458,56 @@ function AdSelectionStep({
 
     setAddingToCart(ad.id)
     try {
-      const response = await fetch('/api/cart/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          state: stateCode,
-          adType: ad.id,
-          quantity: quantity,
-        }),
-      })
+      if (isSignedIn) {
+        // Authenticated user - use API
+        const response = await fetch('/api/cart/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            state: stateCode,
+            adType: ad.id,
+            quantity: quantity,
+          }),
+        })
 
-      if (response.ok) {
+        if (response.ok) {
+          alert(`${quantity}x ${ad.title} added to cart!`)
+          setQuantities(prev => ({ ...prev, [ad.id]: 1 })) // Reset quantity to 1
+          onRefresh() // Refresh inventory to show updated available count
+        } else {
+          const error = await response.json()
+          alert(error.error || 'Failed to add to cart')
+        }
+      } else {
+        // Guest user - use localStorage
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]')
+
+        // Check if item already in cart
+        const existingItemIndex = guestCart.findIndex(
+          (item: any) => item.state === stateCode && item.adType === ad.id
+        )
+
+        if (existingItemIndex >= 0) {
+          // Update quantity
+          guestCart[existingItemIndex].quantity += quantity
+        } else {
+          // Add new item
+          guestCart.push({
+            itemId: `${stateCode}#${ad.id}`,
+            state: stateCode,
+            adType: ad.id,
+            title: ad.title,
+            price: ad.price,
+            quantity: quantity,
+          })
+        }
+
+        localStorage.setItem('guestCart', JSON.stringify(guestCart))
         alert(`${quantity}x ${ad.title} added to cart!`)
         setQuantities(prev => ({ ...prev, [ad.id]: 1 })) // Reset quantity to 1
-        onRefresh() // Refresh inventory to show updated available count
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to add to cart')
+
+        // Trigger a storage event to update CartButton
+        window.dispatchEvent(new Event('cartUpdated'))
       }
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -512,18 +567,46 @@ function AdSelectionStep({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {isSignedIn && ad.inventory > 0 && (
+                  {ad.inventory > 0 && (
                     <>
-                      <input
-                        type="number"
-                        min="1"
-                        max={ad.inventory}
-                        value={getQuantity(ad.id)}
-                        onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
-                        placeholder="QTY"
-                        className="w-14 h-10 px-2 bg-black border-2 border-slate-700 rounded-xl text-white text-center text-sm font-bold focus:outline-none focus:border-green-500 transition-colors placeholder:text-slate-600"
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                      <div className="flex items-center bg-black border-2 border-green-500 rounded-xl overflow-hidden">
+                        <button
+                          className="w-8 h-10 flex items-center justify-center text-black bg-green-500 hover:bg-green-400 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const currentQty = getQuantity(ad.id)
+                            if (currentQty > 1) {
+                              handleQuantityChange(ad.id, String(currentQty - 1))
+                            }
+                          }}
+                          title="Decrease quantity"
+                        >
+                          <span className="text-lg font-bold">−</span>
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={ad.inventory}
+                          value={getQuantity(ad.id)}
+                          onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
+                          placeholder="QTY"
+                          className="w-12 h-10 px-2 bg-black text-white text-center text-sm font-bold focus:outline-none border-x-2 border-green-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                          className="w-8 h-10 flex items-center justify-center text-black bg-green-500 hover:bg-green-400 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const currentQty = getQuantity(ad.id)
+                            if (currentQty < ad.inventory) {
+                              handleQuantityChange(ad.id, String(currentQty + 1))
+                            }
+                          }}
+                          title="Increase quantity"
+                        >
+                          <span className="text-lg font-bold">+</span>
+                        </button>
+                      </div>
                       <button
                         disabled={addingToCart === ad.id}
                         className="w-10 h-10 rounded-xl bg-[#334155] hover:bg-[#475569] border-2 border-slate-700 text-white disabled:opacity-50 flex items-center justify-center transition-all duration-200"
@@ -589,24 +672,52 @@ function AdSelectionStep({
 
                 {/* Quantity + Buttons - Aligned horizontally */}
                 <div className="flex items-center gap-3">
-                  {/* Quantity Input */}
-                  {isSignedIn && ad.inventory > 0 && (
-                    <input
-                      type="number"
-                      min="1"
-                      max={ad.inventory}
-                      value={getQuantity(ad.id)}
-                      onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
-                      placeholder="QTY"
-                      className="w-16 h-12 px-2 bg-black border-2 border-slate-700 rounded-xl text-white text-center text-sm font-bold focus:outline-none focus:border-green-500 transition-colors placeholder:text-slate-600"
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                  {/* Quantity Input with +/- buttons */}
+                  {ad.inventory > 0 && (
+                    <div className="flex items-center bg-black border-2 border-green-500 rounded-xl overflow-hidden">
+                      <button
+                        className="w-10 h-12 flex items-center justify-center text-black bg-green-500 hover:bg-green-400 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const currentQty = getQuantity(ad.id)
+                          if (currentQty > 1) {
+                            handleQuantityChange(ad.id, String(currentQty - 1))
+                          }
+                        }}
+                        title="Decrease quantity"
+                      >
+                        <span className="text-xl font-bold">−</span>
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max={ad.inventory}
+                        value={getQuantity(ad.id)}
+                        onChange={(e) => handleQuantityChange(ad.id, e.target.value)}
+                        placeholder="QTY"
+                        className="w-14 h-12 px-2 bg-black text-white text-center text-sm font-bold focus:outline-none border-x-2 border-green-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        className="w-10 h-12 flex items-center justify-center text-black bg-green-500 hover:bg-green-400 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const currentQty = getQuantity(ad.id)
+                          if (currentQty < ad.inventory) {
+                            handleQuantityChange(ad.id, String(currentQty + 1))
+                          }
+                        }}
+                        title="Increase quantity"
+                      >
+                        <span className="text-xl font-bold">+</span>
+                      </button>
+                    </div>
                   )}
 
                   {/* Action Buttons */}
                   <div className="flex gap-2">
                     {/* Add to Cart Icon Button */}
-                    {isSignedIn && ad.inventory > 0 && (
+                    {ad.inventory > 0 && (
                       <button
                         disabled={addingToCart === ad.id}
                         className="w-12 h-12 rounded-xl bg-[#334155] hover:bg-[#475569] border-2 border-slate-700 text-white disabled:opacity-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"

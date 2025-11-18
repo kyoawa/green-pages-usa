@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Trash2, ShoppingBag, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 
 interface CartItem {
   itemId: string
@@ -12,8 +13,8 @@ interface CartItem {
   title: string
   price: number
   quantity: number
-  addedAt: string
-  reservationId: string
+  addedAt?: string
+  reservationId?: string
 }
 
 interface Cart {
@@ -31,6 +32,7 @@ interface CartModalProps {
 
 export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
   const router = useRouter()
+  const { isSignedIn } = useUser()
   const [cart, setCart] = useState<Cart | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [removingItemId, setRemovingItemId] = useState<string | null>(null)
@@ -39,15 +41,30 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
     if (isOpen) {
       fetchCart()
     }
-  }, [isOpen])
+  }, [isOpen, isSignedIn])
 
   const fetchCart = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/cart')
-      if (response.ok) {
-        const data = await response.json()
-        setCart(data)
+      if (isSignedIn) {
+        // Fetch from API for authenticated users
+        const response = await fetch('/api/cart')
+        if (response.ok) {
+          const data = await response.json()
+          setCart(data)
+        }
+      } else {
+        // Get from localStorage for guests
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]')
+        const subtotal = guestCart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+        const itemCount = guestCart.reduce((sum: number, item: any) => sum + item.quantity, 0)
+
+        setCart({
+          items: guestCart,
+          subtotal,
+          total: subtotal,
+          itemCount
+        })
       }
     } catch (error) {
       console.error('Error fetching cart:', error)
@@ -59,17 +76,28 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
   const removeItem = async (itemId: string) => {
     setRemovingItemId(itemId)
     try {
-      const response = await fetch('/api/cart/remove', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId }),
-      })
+      if (isSignedIn) {
+        // Remove from API for authenticated users
+        const response = await fetch('/api/cart/remove', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId }),
+        })
 
-      if (response.ok) {
+        if (response.ok) {
+          await fetchCart()
+          onCartUpdate?.()
+        } else {
+          alert('Failed to remove item from cart')
+        }
+      } else {
+        // Remove from localStorage for guests
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]')
+        const updatedCart = guestCart.filter((item: any) => item.itemId !== itemId)
+        localStorage.setItem('guestCart', JSON.stringify(updatedCart))
         await fetchCart()
         onCartUpdate?.()
-      } else {
-        alert('Failed to remove item from cart')
+        window.dispatchEvent(new Event('cartUpdated'))
       }
     } catch (error) {
       console.error('Error removing item:', error)
@@ -86,15 +114,23 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
 
     setIsLoading(true)
     try {
-      const response = await fetch('/api/cart/clear', {
-        method: 'DELETE',
-      })
+      if (isSignedIn) {
+        const response = await fetch('/api/cart/clear', {
+          method: 'DELETE',
+        })
 
-      if (response.ok) {
+        if (response.ok) {
+          await fetchCart()
+          onCartUpdate?.()
+        } else {
+          alert('Failed to clear cart')
+        }
+      } else {
+        // Clear localStorage for guests
+        localStorage.removeItem('guestCart')
         await fetchCart()
         onCartUpdate?.()
-      } else {
-        alert('Failed to clear cart')
+        window.dispatchEvent(new Event('cartUpdated'))
       }
     } catch (error) {
       console.error('Error clearing cart:', error)
@@ -105,7 +141,14 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
   }
 
   const handleCheckout = () => {
-    // TODO: Navigate to cart checkout page
+    if (!isSignedIn) {
+      // Guest user - prompt to sign up
+      onClose()
+      window.location.href = `/sign-up?redirect_url=${encodeURIComponent('/checkout/cart')}`
+      return
+    }
+
+    // Authenticated user - proceed to checkout
     onClose()
     router.push('/checkout/cart')
   }
@@ -177,24 +220,16 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
                     <h3 className="font-medium text-white text-xs sm:text-sm mb-1 leading-tight">
                       {item.title} {item.quantity > 1 && `× ${item.quantity}`}
                     </h3>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mb-2">
-                      {item.state} • {item.adType}
+                    <p className="text-xs text-gray-400 mb-2">
+                      {item.state}
                     </p>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-base sm:text-lg font-bold text-white font-display">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-bold text-green-400">
                         ${(item.price * item.quantity).toLocaleString()}
-                      </p>
-                      {item.quantity > 1 && (
-                        <span className="text-[10px] sm:text-xs text-gray-500 font-display">
-                          ${item.price.toLocaleString()} each
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Reservation Timer */}
-                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-orange-400 mt-2">
-                      <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      <span>Reserved (expires in 15 min)</span>
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ${item.price.toLocaleString()} each
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -202,50 +237,45 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
 
               {/* Clear Cart Button */}
               {cart.items.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={clearCart}
-                  disabled={isLoading}
-                  className="w-full text-red-400 hover:text-red-300 hover:bg-gray-800 border-gray-700 text-xs sm:text-sm"
+                  className="w-full text-center text-xs text-red-400 hover:text-red-300 py-2 transition-colors"
                 >
                   Clear Cart
-                </Button>
+                </button>
               )}
             </div>
           )}
         </div>
 
-        {/* Footer - Cart Totals */}
+        {/* Footer */}
         {cart && cart.items.length > 0 && (
-          <div className="border-t border-gray-700 p-3 sm:p-4 bg-black">
-            <div className="space-y-2 mb-3 sm:mb-4">
-              {/* Subtotal */}
-              <div className="bg-gray-800 p-2 sm:p-3 rounded-md">
-                <div className="flex justify-between text-xs sm:text-sm text-gray-400">
-                  <span>Subtotal</span>
-                  <span className="text-white font-medium font-display">
-                    ${cart.subtotal.toLocaleString()}
-                  </span>
-                </div>
+          <div className="border-t border-gray-700 p-3 sm:p-4 bg-black space-y-3">
+            {/* Totals */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Subtotal:</span>
+                <span className="text-white font-medium">${cart.subtotal.toLocaleString()}</span>
               </div>
-
-              {/* Total */}
-              <div className="flex justify-between text-base sm:text-lg font-bold border-t border-gray-700 pt-3">
-                <span className="text-green-400 tracking-wide">TOTAL:</span>
-                <span className="text-green-400 font-display">
-                  ${cart.total.toFixed(2)}
-                </span>
+              <div className="flex justify-between text-base sm:text-lg font-bold border-t border-gray-700 pt-2">
+                <span className="text-white">Total:</span>
+                <span className="text-green-400">${cart.total.toLocaleString()}</span>
               </div>
             </div>
 
+            {/* Checkout Button */}
             <Button
               onClick={handleCheckout}
-              disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base py-2.5 sm:py-3 font-bold tracking-wide"
+              className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-3 sm:py-4 rounded-full transition-colors text-sm sm:text-base"
             >
-              CHECKOUT ({cart.itemCount})
+              {isSignedIn ? 'PROCEED TO CHECKOUT' : 'SIGN UP TO CHECKOUT'}
             </Button>
+
+            {!isSignedIn && (
+              <p className="text-xs text-center text-gray-500">
+                Create an account to complete your purchase
+              </p>
+            )}
           </div>
         )}
       </div>

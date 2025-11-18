@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Roboto } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ClerkProvider } from '@clerk/nextjs'
+import { ClientProviders } from '@/components/ClientProviders'
 import './globals.css'
 
 const roboto = Roboto({
@@ -45,7 +46,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`font-sans ${roboto.variable}`}>
-          {children}
+          <ClientProviders>
+            {children}
+          </ClientProviders>
           <Analytics />
         </body>
       </html>

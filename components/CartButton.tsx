@@ -14,27 +14,40 @@ export function CartButton() {
 
   // Fetch cart on mount and when modal closes
   useEffect(() => {
-    if (isSignedIn) {
-      fetchCartCount()
+    updateCartCount()
+
+    // Listen for cart updates from guest additions
+    const handleCartUpdate = () => {
+      updateCartCount()
+    }
+    window.addEventListener('cartUpdated', handleCartUpdate)
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate)
     }
   }, [isSignedIn, isModalOpen])
 
-  const fetchCartCount = async () => {
-    try {
-      const response = await fetch('/api/cart')
-      if (response.ok) {
-        const cart = await response.json()
-        setItemCount(cart.itemCount || 0)
+  const updateCartCount = async () => {
+    if (isSignedIn) {
+      // Fetch from API for authenticated users
+      try {
+        const response = await fetch('/api/cart')
+        if (response.ok) {
+          const cart = await response.json()
+          setItemCount(cart.itemCount || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error)
       }
-    } catch (error) {
-      console.error('Error fetching cart:', error)
+    } else {
+      // Get from localStorage for guests
+      const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]')
+      const totalItems = guestCart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+      setItemCount(totalItems)
     }
   }
 
-  if (!isSignedIn) {
-    return null // Don't show cart button if not logged in
-  }
-
+  // Always show cart button (for both guests and authenticated users)
   return (
     <>
       <Button
@@ -54,7 +67,7 @@ export function CartButton() {
       <CartModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onCartUpdate={fetchCartCount}
+        onCartUpdate={updateCartCount}
       />
     </>
   )
