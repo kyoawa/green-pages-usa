@@ -140,6 +140,22 @@ export default function DynamicStatePage() {
     fetchInventory()
   }, [stateCode])
 
+  // Check for ad parameter in URL (after sign-in redirect)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const adId = searchParams.get('ad')
+
+    if (adId && isSignedIn && inventory.length > 0) {
+      const ad = inventory.find(a => a.id === adId)
+      if (ad && ad.inventory > 0) {
+        setSelectedAd(ad)
+        setCurrentStep(1)
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    }
+  }, [isSignedIn, inventory])
+
   const fetchInventory = async () => {
     try {
       setLoading(true)
@@ -165,6 +181,13 @@ export default function DynamicStatePage() {
 
   const handleAdSelect = (ad: AdData) => {
     if (ad.inventory > 0) {
+      // Check if user is signed in
+      if (!isSignedIn) {
+        // Redirect to sign-in page with return URL
+        window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.pathname + `?ad=${ad.id}`)}`
+        return
+      }
+
       setSelectedAd(ad)
       setCurrentStep(1)
     }
@@ -393,7 +416,8 @@ function AdSelectionStep({
     e.stopPropagation()
 
     if (!isSignedIn) {
-      alert('Please sign in to add items to your cart')
+      // Redirect to sign-in page with return URL
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`
       return
     }
 
