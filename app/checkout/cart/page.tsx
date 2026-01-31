@@ -253,7 +253,7 @@ const CheckoutForm = ({ cart, userId, initialDiscount, onDiscountChange }: {
           {appliedDiscount.amount > 0 && (
             <div className="flex justify-between items-center text-xs lg:text-sm text-green-400">
               <span className="flex items-center gap-2">
-                {appliedDiscount.type === 'bundle' ? '🎁' : '🏷️'} {appliedDiscount.description}
+                {appliedDiscount.description}
                 {appliedDiscount.type === 'code' && (
                   <button
                     onClick={removeDiscount}

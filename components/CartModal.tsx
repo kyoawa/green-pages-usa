@@ -24,6 +24,13 @@ interface Cart {
   itemCount: number
 }
 
+interface AppliedDiscount {
+  type: 'bundle' | 'code' | 'none'
+  name: string
+  amount: number
+  description: string
+}
+
 interface CartModalProps {
   isOpen: boolean
   onClose: () => void
@@ -36,6 +43,7 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
   const [cart, setCart] = useState<Cart | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [removingItemId, setRemovingItemId] = useState<string | null>(null)
+  const [discount, setDiscount] = useState<AppliedDiscount>({ type: 'none', name: '', amount: 0, description: '' })
 
   useEffect(() => {
     if (isOpen) {
@@ -52,6 +60,28 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
         if (response.ok) {
           const data = await response.json()
           setCart(data)
+
+          // Fetch bundle discounts
+          if (data && data.items.length > 0) {
+            const discountResponse = await fetch('/api/checkout/apply-discount', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: data.items,
+                subtotal: data.subtotal
+              })
+            })
+            if (discountResponse.ok) {
+              const discountData = await discountResponse.json()
+              if (discountData.discount) {
+                setDiscount(discountData.discount)
+              } else {
+                setDiscount({ type: 'none', name: '', amount: 0, description: '' })
+              }
+            }
+          } else {
+            setDiscount({ type: 'none', name: '', amount: 0, description: '' })
+          }
         }
       } else {
         // Get from localStorage for guests
@@ -257,9 +287,15 @@ export function CartModal({ isOpen, onClose, onCartUpdate }: CartModalProps) {
                 <span className="text-gray-400">Subtotal:</span>
                 <span className="text-white font-medium">${cart.subtotal.toLocaleString()}</span>
               </div>
+              {discount.amount > 0 && (
+                <div className="flex justify-between text-sm text-green-400">
+                  <span>{discount.description}</span>
+                  <span>-${discount.amount.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between text-base sm:text-lg font-bold border-t border-gray-700 pt-2">
                 <span className="text-white">Total:</span>
-                <span className="text-green-400">${cart.total.toLocaleString()}</span>
+                <span className="text-green-400">${(cart.subtotal - discount.amount).toLocaleString()}</span>
               </div>
             </div>
 
