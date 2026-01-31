@@ -10,6 +10,7 @@ import {
   useElements
 } from '@stripe/react-stripe-js'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useUser } from '@clerk/nextjs'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -304,6 +305,7 @@ const CheckoutForm = ({ onPaymentSuccess, state, selectedAd, paymentProcessing }
 // Main export - keeps same name for drop-in replacement
 export function EnhancedCheckoutStep(props: CheckoutStepProps) {
   const [clientSecret, setClientSecret] = useState("")
+  const { user } = useUser()
 
   useEffect(() => {
     if (!props.selectedAd) return
@@ -311,7 +313,7 @@ export function EnhancedCheckoutStep(props: CheckoutStepProps) {
     const getStateCode = (stateName: string): string => {
       const stateMap: { [key: string]: string } = {
         'California': 'CA',
-        'Montana': 'MT', 
+        'Montana': 'MT',
         'Illinois': 'IL',
         'Missouri': 'MO',
         'Oklahoma': 'OK',
@@ -328,7 +330,8 @@ export function EnhancedCheckoutStep(props: CheckoutStepProps) {
         amount: props.selectedAd.price,
         state: getStateCode(props.state),
         adType: props.selectedAd.id,
-        adTitle: props.selectedAd.title
+        adTitle: props.selectedAd.title,
+        userId: user?.id
       }),
     })
       .then((res) => res.json())
@@ -336,7 +339,7 @@ export function EnhancedCheckoutStep(props: CheckoutStepProps) {
       .catch((error) => {
         console.error("Error:", error)
       })
-  }, [props.selectedAd, props.state])
+  }, [props.selectedAd, props.state, user])
 
   const appearance = {
     theme: 'night' as const,

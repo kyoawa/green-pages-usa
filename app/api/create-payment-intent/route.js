@@ -173,6 +173,7 @@ export async function POST(request) {
           state: stateCode,
           adType: adKey,
           adTitle: adTitle || "",
+          userId: userId || "",
           // Keep originals for debugging
           originalState: state,
           originalAdType: adType
