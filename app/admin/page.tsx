@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Package, FileText, Settings, Database, ArrowRight, LogOut } from 'lucide-react'
+import { Package, FileText, Settings, Database, ArrowRight, LogOut, Tag, Gift } from 'lucide-react'
 import { useUser, SignOutButton } from '@clerk/nextjs'
 
 export default function AdminPage() {
@@ -217,6 +217,58 @@ export default function AdminPage() {
               </p>
               <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                 Manage Templates <ArrowRight size={16} style={{ marginLeft: '4px' }} />
+              </div>
+            </div>
+          </Link>
+
+          {/* Bundle Deals */}
+          <Link href="/admin/bundle-deals" style={{ textDecoration: 'none' }}>
+            <div style={{
+              backgroundColor: '#1f2937',
+              border: '1px solid #374151',
+              padding: '24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              height: '100%'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#22c55e'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <Gift style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Bundle Deals</h2>
+              </div>
+              <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
+                Create quantity-based discounts that automatically apply for bulk purchases.
+              </p>
+              <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                Manage Bundles <ArrowRight size={16} style={{ marginLeft: '4px' }} />
+              </div>
+            </div>
+          </Link>
+
+          {/* Discount Codes */}
+          <Link href="/admin/discount-codes" style={{ textDecoration: 'none' }}>
+            <div style={{
+              backgroundColor: '#1f2937',
+              border: '1px solid #374151',
+              padding: '24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              height: '100%'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#22c55e'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#374151'}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <Tag style={{ color: '#22c55e', marginRight: '12px' }} size={24} />
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Discount Codes</h2>
+              </div>
+              <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
+                Create promotional codes customers can enter at checkout for discounts.
+              </p>
+              <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                Manage Codes <ArrowRight size={16} style={{ marginLeft: '4px' }} />
               </div>
             </div>
           </Link>

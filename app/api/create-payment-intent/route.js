@@ -35,10 +35,10 @@ const toAdKey = (t) => {
 export async function POST(request) {
   try {
     const payload = await request.json()
-    const { amount, state, adType, adTitle, cartItems, userId } = payload
+    const { amount, state, adType, adTitle, cartItems, userId, discount, discountCode } = payload
 
     console.log('=== CREATE PAYMENT INTENT ===')
-    console.log('Original payload:', { amount, state, adType, adTitle, hasCartItems: !!cartItems })
+    console.log('Original payload:', { amount, state, adType, adTitle, hasCartItems: !!cartItems, discount, discountCode })
 
     // Check if this is a cart checkout or single-item checkout
     const isCartCheckout = cartItems && Array.isArray(cartItems) && cartItems.length > 0
@@ -87,6 +87,16 @@ export async function POST(request) {
         checkoutType: "cart",
         userId: userId,
         itemCount: cartItems.length.toString()
+      }
+
+      // Add discount info to metadata if present
+      if (discount && discount.amount > 0) {
+        metadata.discountType = discount.type
+        metadata.discountAmount = discount.amount.toString()
+        metadata.discountDescription = discount.description
+        if (discountCode) {
+          metadata.discountCode = discountCode
+        }
       }
 
       // Try to fit cart items in metadata, otherwise just store user ID

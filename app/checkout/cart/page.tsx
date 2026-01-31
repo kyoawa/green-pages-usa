@@ -33,7 +33,19 @@ interface Cart {
   itemCount: number
 }
 
-const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
+interface AppliedDiscount {
+  type: 'bundle' | 'code' | 'none'
+  name: string
+  amount: number
+  description: string
+}
+
+const CheckoutForm = ({ cart, userId, initialDiscount, onDiscountChange }: {
+  cart: Cart
+  userId: string
+  initialDiscount: AppliedDiscount
+  onDiscountChange: (discount: AppliedDiscount, code?: string) => void
+}) => {
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
@@ -45,6 +57,54 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
   const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showMobileSummary, setShowMobileSummary] = useState(false)
+  const [discountCode, setDiscountCode] = useState('')
+  const [discountLoading, setDiscountLoading] = useState(false)
+  const [discountError, setDiscountError] = useState<string | null>(null)
+  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount>(initialDiscount)
+
+  const finalTotal = cart.subtotal - appliedDiscount.amount
+
+  const applyDiscountCode = async () => {
+    if (!discountCode.trim()) return
+
+    setDiscountLoading(true)
+    setDiscountError(null)
+
+    try {
+      const response = await fetch('/api/checkout/apply-discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: discountCode,
+          items: cart.items,
+          subtotal: cart.subtotal
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.valid && data.discount) {
+        setAppliedDiscount(data.discount)
+        onDiscountChange(data.discount, data.discount.type === 'code' ? discountCode : undefined)
+        if (data.message) {
+          setDiscountError(data.message) // Shows "bundle is better" message
+        }
+      } else {
+        setDiscountError(data.error || 'Invalid discount code')
+      }
+    } catch (error) {
+      setDiscountError('Failed to apply discount code')
+    } finally {
+      setDiscountLoading(false)
+    }
+  }
+
+  const removeDiscount = () => {
+    setDiscountCode('')
+    setAppliedDiscount(initialDiscount) // Reset to bundle discount if any
+    onDiscountChange(initialDiscount, undefined)
+    setDiscountError(null)
+  }
 
   const fillTestData = async () => {
     setEmail('test@greenpages.com')
@@ -184,19 +244,61 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
           ))}
         </div>
 
-        <div className="bg-gray-800 p-3 lg:p-4 rounded-md">
-          <div className="flex justify-between items-center text-xs lg:text-sm text-gray-400 mb-1">
+        <div className="bg-gray-800 p-3 lg:p-4 rounded-md space-y-2">
+          <div className="flex justify-between items-center text-xs lg:text-sm text-gray-400">
             <span>Subtotal</span>
             <span className="font-display">${cart.subtotal.toLocaleString()}</span>
           </div>
+
+          {appliedDiscount.amount > 0 && (
+            <div className="flex justify-between items-center text-xs lg:text-sm text-green-400">
+              <span className="flex items-center gap-2">
+                {appliedDiscount.type === 'bundle' ? '🎁' : '🏷️'} {appliedDiscount.description}
+                {appliedDiscount.type === 'code' && (
+                  <button
+                    onClick={removeDiscount}
+                    className="text-red-400 hover:text-red-300 text-xs"
+                  >
+                    (remove)
+                  </button>
+                )}
+              </span>
+              <span className="font-display">-${appliedDiscount.amount.toLocaleString()}</span>
+            </div>
+          )}
         </div>
+
+        {/* Discount Code Input */}
+        {appliedDiscount.type !== 'code' && (
+          <div className="mt-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Discount code"
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                className="flex-1 p-2 lg:p-3 bg-gray-800 text-white placeholder-gray-500 border border-gray-600 rounded-md focus:outline-none focus:border-green-500 text-sm uppercase"
+              />
+              <button
+                onClick={applyDiscountCode}
+                disabled={discountLoading || !discountCode.trim()}
+                className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {discountLoading ? '...' : 'Apply'}
+              </button>
+            </div>
+            {discountError && (
+              <p className="text-yellow-400 text-xs mt-2">{discountError}</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="border-t border-gray-700 pt-4 lg:pt-6">
         <div className="flex justify-between items-center">
           <span className="text-lg lg:text-2xl font-bold text-green-400">TOTAL:</span>
           <span className="text-lg lg:text-2xl font-bold text-green-400 font-display">
-            ${cart.total.toFixed(2)}
+            ${finalTotal.toFixed(2)}
           </span>
         </div>
       </div>
@@ -213,7 +315,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
         >
           <span className="text-lg font-semibold">Order Total</span>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-green-400 font-display">${cart.total.toFixed(2)}</span>
+            <span className="text-lg font-bold text-green-400 font-display">${finalTotal.toFixed(2)}</span>
             {showMobileSummary ? <ChevronUp /> : <ChevronDown />}
           </div>
         </button>
@@ -336,7 +438,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
                   PROCESSING...
                 </div>
               ) : (
-                <>COMPLETE ORDER <span className="font-display">${cart.total.toFixed(2)}</span></>
+                <>COMPLETE ORDER <span className="font-display">${finalTotal.toFixed(2)}</span></>
               )}
             </button>
           </div>
@@ -358,7 +460,7 @@ const CheckoutForm = ({ cart, userId }: { cart: Cart; userId: string }) => {
                 PROCESSING...
               </div>
             ) : (
-              <>COMPLETE ORDER <span className="font-display">${cart.total.toFixed(2)}</span></>
+              <>COMPLETE ORDER <span className="font-display">${finalTotal.toFixed(2)}</span></>
             )}
           </button>
         </div>
@@ -373,6 +475,13 @@ export default function CartCheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null)
   const [clientSecret, setClientSecret] = useState("")
   const [loading, setLoading] = useState(true)
+  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount>({
+    type: 'none',
+    name: '',
+    amount: 0,
+    description: ''
+  })
+  const [appliedCode, setAppliedCode] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -395,14 +504,36 @@ export default function CartCheckoutPage() {
 
           setCart(cartData)
 
+          // Fetch any automatic bundle discounts
+          const discountResponse = await fetch('/api/checkout/apply-discount', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: cartData.items,
+              subtotal: cartData.subtotal
+            })
+          })
+
+          let discount: AppliedDiscount = { type: 'none', name: '', amount: 0, description: '' }
+          if (discountResponse.ok) {
+            const discountData = await discountResponse.json()
+            if (discountData.discount) {
+              discount = discountData.discount
+              setAppliedDiscount(discount)
+            }
+          }
+
+          const finalAmount = cartData.subtotal - discount.amount
+
           // Create payment intent for cart
           const paymentResponse = await fetch('/api/create-payment-intent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              amount: cartData.total,
+              amount: finalAmount,
               cartItems: cartData.items,
-              userId: user?.id
+              userId: user?.id,
+              discount: discount.amount > 0 ? discount : undefined
             })
           })
 
@@ -427,6 +558,34 @@ export default function CartCheckoutPage() {
 
     fetchCart()
   }, [isSignedIn, user, router])
+
+  // Handle discount changes - need to update payment intent
+  const handleDiscountChange = async (discount: AppliedDiscount, code?: string) => {
+    setAppliedDiscount(discount)
+    setAppliedCode(code)
+
+    if (!cart) return
+
+    const finalAmount = cart.subtotal - discount.amount
+
+    // Update payment intent with new amount
+    const paymentResponse = await fetch('/api/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: finalAmount,
+        cartItems: cart.items,
+        userId: user?.id,
+        discount: discount.amount > 0 ? discount : undefined,
+        discountCode: code
+      })
+    })
+
+    if (paymentResponse.ok) {
+      const paymentData = await paymentResponse.json()
+      setClientSecret(paymentData.clientSecret)
+    }
+  }
 
   const appearance = {
     theme: 'night' as const,
@@ -463,8 +622,13 @@ export default function CartCheckoutPage() {
   return (
     <div className="bg-black min-h-screen">
       {clientSecret && cart && (
-        <Elements options={options} stripe={stripePromise}>
-          <CheckoutForm cart={cart} userId={user?.id || ''} />
+        <Elements options={options} stripe={stripePromise} key={clientSecret}>
+          <CheckoutForm
+            cart={cart}
+            userId={user?.id || ''}
+            initialDiscount={appliedDiscount}
+            onDiscountChange={handleDiscountChange}
+          />
         </Elements>
       )}
     </div>

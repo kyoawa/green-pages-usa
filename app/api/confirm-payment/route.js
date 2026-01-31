@@ -3,6 +3,7 @@ import Stripe from "stripe"
 import { getCart, clearCart, calculateCartTotals } from "@/lib/cart"
 import { completeReservation } from "@/lib/reservations"
 import { createOrder, initializeSlotSubmissions } from "@/lib/orders"
+import { incrementDiscountCodeUsage } from "@/lib/discounts"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
@@ -26,7 +27,14 @@ export async function POST(request) {
         // CART CHECKOUT MODE
         console.log('Processing cart checkout')
 
-        const { userId, cartItems: cartItemsJson } = paymentIntent.metadata
+        const {
+          userId,
+          cartItems: cartItemsJson,
+          discountType,
+          discountAmount,
+          discountDescription,
+          discountCode
+        } = paymentIntent.metadata
 
         if (!userId) {
           console.error('Missing userId in cart checkout')
@@ -155,15 +163,31 @@ export async function POST(request) {
             customerName: paymentIntent.metadata.customerName || 'Unknown',
             customerPhone: paymentIntent.metadata.customerPhone || '',
             items: items,
-            subtotal: fullCart ? fullCart.subtotal : (paymentIntent.amount / 100),
+            subtotal: fullCart ? fullCart.subtotal : (paymentIntent.amount / 100 + (parseFloat(discountAmount) || 0)),
             total: paymentIntent.amount / 100,
             createdAt: new Date().toISOString(),
             uploadStatus: {},
-            slotSubmissions: slotSubmissions
+            slotSubmissions: slotSubmissions,
+            // Discount tracking
+            discountType: discountType || null,
+            discountAmount: parseFloat(discountAmount) || 0,
+            discountDescription: discountDescription || null,
+            discountCode: discountCode || null
           }
 
           await createOrder(orderData)
           console.log('Order created successfully with slot tracking:', paymentIntentId)
+
+          // Increment discount code usage if a code was used
+          if (discountCode && discountType === 'code') {
+            try {
+              await incrementDiscountCodeUsage(discountCode)
+              console.log('Discount code usage incremented:', discountCode)
+            } catch (error) {
+              console.error('Failed to increment discount code usage:', error)
+              // Don't fail the order for this
+            }
+          }
         } catch (error) {
           console.error('Failed to create order record:', error)
           // Don't fail the whole payment, just log it
