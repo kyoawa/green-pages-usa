@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, DeleteCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
+import { auth } from '@clerk/nextjs/server'
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION,
@@ -18,14 +19,21 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  console.log('🔍 [API] GET /api/admin/ads/[id] called with id:', params.id)
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Decode URL-encoded ID (e.g., "CA%23single" -> "CA#single")
+  const decodedId = decodeURIComponent(params.id)
+  console.log('🔍 [API] GET /api/admin/ads/[id] called with id:', decodedId)
   try {
     const command = new GetCommand({
       TableName: 'green-pages-ads',
-      Key: { id: params.id }
+      Key: { id: decodedId }
     })
 
-    console.log('📡 [API] Querying DynamoDB for ad:', params.id)
+    console.log('📡 [API] Querying DynamoDB for ad:', decodedId)
     const response = await docClient.send(command)
 
     console.log('📦 [API] DynamoDB response:', response.Item ? 'Item found' : 'Item not found')
@@ -48,13 +56,21 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Decode URL-encoded ID
+  const decodedId = decodeURIComponent(params.id)
+
   try {
     const body = await request.json()
     const { title, price, inventory, totalSlots, description } = body
-    
+
     const command = new UpdateCommand({
       TableName: 'green-pages-ads',
-      Key: { id: params.id },
+      Key: { id: decodedId },
       UpdateExpression: 'SET title = :title, price = :price, inventory = :inventory, totalSlots = :totalSlots, description = :description, updatedAt = :updatedAt',
       ExpressionAttributeValues: {
         ':title': title,
@@ -80,6 +96,14 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Decode URL-encoded ID
+  const decodedId = decodeURIComponent(params.id)
+
   try {
     const body = await request.json()
 
@@ -102,7 +126,7 @@ export async function PATCH(
 
     const command = new UpdateCommand({
       TableName: 'green-pages-ads',
-      Key: { id: params.id },
+      Key: { id: decodedId },
       UpdateExpression: `SET ${updateExpressions.join(', ')}`,
       ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'ALL_NEW'
@@ -121,10 +145,18 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Decode URL-encoded ID
+  const decodedId = decodeURIComponent(params.id)
+
   try {
     const command = new DeleteCommand({
       TableName: 'green-pages-ads',
-      Key: { id: params.id }
+      Key: { id: decodedId }
     })
 
     await docClient.send(command)

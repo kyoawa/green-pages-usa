@@ -159,7 +159,7 @@ export default function AdminAdsPage() {
 
   const handleUpdateAd = async (adId: string) => {
     try {
-      const response = await fetch(`/api/admin/ads/${adId}`, {
+      const response = await fetch(`/api/admin/ads/${encodeURIComponent(adId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
@@ -177,9 +177,9 @@ export default function AdminAdsPage() {
 
   const handleDeleteAd = async (adId: string) => {
     if (!confirm('Are you sure you want to delete this ad?')) return
-    
+
     try {
-      const response = await fetch(`/api/admin/ads/${adId}`, {
+      const response = await fetch(`/api/admin/ads/${encodeURIComponent(adId)}`, {
         method: 'DELETE'
       })
       

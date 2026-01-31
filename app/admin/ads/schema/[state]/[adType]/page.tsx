@@ -36,8 +36,9 @@ export default function SchemaEditorPage({ params }: PageProps) {
 
   const fetchAdAndSchema = async () => {
     try {
-      // Fetch ad details
-      const response = await fetch(`/api/admin/ads/${state}#${adType}`)
+      // Fetch ad details - encode ID to handle the # character
+      const adId = `${state}#${adType}`
+      const response = await fetch(`/api/admin/ads/${encodeURIComponent(adId)}`)
       if (response.ok) {
         const ad = await response.json()
         setAdInfo(ad)
@@ -115,7 +116,8 @@ export default function SchemaEditorPage({ params }: PageProps) {
   const saveSchema = async () => {
     setSaving(true)
     try {
-      const response = await fetch(`/api/admin/ads/${state}#${adType}`, {
+      const adId = `${state}#${adType}`
+      const response = await fetch(`/api/admin/ads/${encodeURIComponent(adId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uploadSchema: schema })
