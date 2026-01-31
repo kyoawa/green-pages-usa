@@ -324,8 +324,8 @@ export function EnhancedCheckoutStep(props: CheckoutStepProps) {
     fetch("/api/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        amount: props.selectedAd.price * 1.08, // Match the UI
+      body: JSON.stringify({
+        amount: props.selectedAd.price,
         state: getStateCode(props.state),
         adType: props.selectedAd.id,
         adTitle: props.selectedAd.title
