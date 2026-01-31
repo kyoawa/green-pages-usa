@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Roboto } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import Script from 'next/script'
 import { ClerkProvider } from '@clerk/nextjs'
 import { ClientProviders } from '@/components/ClientProviders'
 import './globals.css'
@@ -50,6 +51,12 @@ export default function RootLayout({
             {children}
           </ClientProviders>
           <Analytics />
+          {/* HubSpot Tracking */}
+          <Script
+            id="hs-script-loader"
+            src="//js-na2.hs-scripts.com/244962435.js"
+            strategy="afterInteractive"
+          />
         </body>
       </html>
     </ClerkProvider>
