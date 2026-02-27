@@ -279,6 +279,9 @@ export default function MultiSlotUpload({
               initialData={existingData}
               buttonText={slots[currentSlot - 1]?.status === 'completed' ? 'UPDATE SLOT' : `SAVE SLOT ${currentSlot}`}
               isSubmitting={isSubmitting}
+              orderId={orderId}
+              itemId={orderItem.itemId}
+              slotNumber={currentSlot}
             />
 
             {/* Save & Finish Later Button */}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Loader2 } from 'lucide-react'
 import type { UploadField, UploadSchema } from '@/lib/types'
 
 interface DynamicUploadFormProps {
@@ -10,6 +10,50 @@ interface DynamicUploadFormProps {
   initialData?: { [fieldName: string]: any }
   buttonText?: string
   isSubmitting?: boolean
+  orderId?: string
+  itemId?: string
+  slotNumber?: number
+}
+
+async function uploadFileToS3(
+  file: File,
+  fieldName: string,
+  orderId: string,
+  itemId: string,
+  slotNumber: number
+): Promise<string> {
+  // Get presigned URL
+  const presignRes = await fetch('/api/upload-requirements/presign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: file.type,
+      orderId,
+      itemId,
+      slotNumber,
+      fieldName,
+    }),
+  })
+
+  if (!presignRes.ok) {
+    throw new Error('Failed to get upload URL')
+  }
+
+  const { presignedUrl, fileUrl } = await presignRes.json()
+
+  // Upload directly to S3
+  const uploadRes = await fetch(presignedUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
+  })
+
+  if (!uploadRes.ok) {
+    throw new Error(`Failed to upload ${file.name}`)
+  }
+
+  return fileUrl
 }
 
 export default function DynamicUploadForm({
@@ -17,7 +61,10 @@ export default function DynamicUploadForm({
   onSubmit,
   initialData = {},
   buttonText = "SUBMIT",
-  isSubmitting = false
+  isSubmitting = false,
+  orderId,
+  itemId,
+  slotNumber,
 }: DynamicUploadFormProps) {
   // Initialize formData with default empty strings for all fields
   const initializeFormData = () => {
@@ -34,6 +81,7 @@ export default function DynamicUploadForm({
   const [formData, setFormData] = useState<{ [key: string]: any }>(initializeFormData())
   const [files, setFiles] = useState<{ [key: string]: File | File[] | null }>({})
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [uploadProgress, setUploadProgress] = useState<string>('')
 
   const handleTextChange = (fieldName: string, value: string) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }))
@@ -157,21 +205,48 @@ export default function DynamicUploadForm({
       }
     })
 
-    // Add all files
-    Object.entries(files).forEach(([fieldName, fileData]) => {
-      if (fileData) {
+    // Upload files directly to S3 via presigned URLs if we have the required info
+    if (orderId && itemId && slotNumber !== undefined) {
+      const fileUrls: Record<string, string | string[]> = {}
+
+      for (const [fieldName, fileData] of Object.entries(files)) {
+        if (!fileData) continue
+
         if (Array.isArray(fileData)) {
-          fileData.forEach((file, index) => {
-            submitFormData.append(`${fieldName}_${index}`, file)
-          })
-          submitFormData.append(`${fieldName}_count`, fileData.length.toString())
+          const urls: string[] = []
+          for (let i = 0; i < fileData.length; i++) {
+            setUploadProgress(`Uploading ${fieldName} (${i + 1}/${fileData.length})...`)
+            const url = await uploadFileToS3(fileData[i], `${fieldName}_${i}`, orderId, itemId, slotNumber)
+            urls.push(url)
+          }
+          fileUrls[fieldName] = urls
         } else {
-          submitFormData.append(fieldName, fileData)
+          setUploadProgress(`Uploading ${fieldName}...`)
+          const url = await uploadFileToS3(fileData, fieldName, orderId, itemId, slotNumber)
+          fileUrls[fieldName] = url
         }
       }
-    })
+
+      setUploadProgress('Saving submission...')
+      submitFormData.append('_fileUrls', JSON.stringify(fileUrls))
+    } else {
+      // Fallback: send files through the API (for legacy/non-slot uploads)
+      Object.entries(files).forEach(([fieldName, fileData]) => {
+        if (fileData) {
+          if (Array.isArray(fileData)) {
+            fileData.forEach((file, index) => {
+              submitFormData.append(`${fieldName}_${index}`, file)
+            })
+            submitFormData.append(`${fieldName}_count`, fileData.length.toString())
+          } else {
+            submitFormData.append(fieldName, fileData)
+          }
+        }
+      })
+    }
 
     await onSubmit(submitFormData)
+    setUploadProgress('')
   }
 
   const renderField = (field: UploadField) => {
@@ -287,7 +362,7 @@ export default function DynamicUploadForm({
             {existingFileUrl && !currentFiles && (
               <div className="mt-2 p-2 bg-gray-800 rounded-md flex items-center justify-between">
                 <span className="text-gray-300 text-sm">
-                  {field.fieldType === 'image' ? '📷' : '📄'} Current file
+                  Current file
                 </span>
                 <a
                   href={existingFileUrl}
@@ -346,6 +421,13 @@ export default function DynamicUploadForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {schema.fields.map(field => renderField(field))}
+
+      {uploadProgress && (
+        <div className="flex items-center gap-2 text-green-400 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          {uploadProgress}
+        </div>
+      )}
 
       <button
         type="submit"

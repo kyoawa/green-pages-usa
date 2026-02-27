@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid"
 import { createReservation, releaseReservation, completeReservation, calculateAvailableInventory } from "./reservations"
 
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION,
+  region: process.env.AWS_REGION || "us-west-2",
   credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
     ? {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,

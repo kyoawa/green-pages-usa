@@ -41,55 +41,72 @@ export async function POST(request: NextRequest) {
     const adType = formData.get('adType') as string
     const adTitle = formData.get('adTitle') as string
 
+    // Check if files were already uploaded directly to S3 via presigned URLs
+    const preUploadedFileUrls = formData.get('_fileUrls') as string | null
+
     // Extract all dynamic form fields (non-file, non-metadata)
     const dynamicFields: any = {}
-    const files: { [key: string]: File | File[] } = {}
+    const metadataKeys = ['customerEmail', 'customerName', 'customerPhone', 'state', 'orderId', 'itemId', 'slotNumber', 'adType', 'adTitle', '_fileUrls']
 
-    const metadataKeys = ['customerEmail', 'customerName', 'customerPhone', 'state', 'orderId', 'itemId', 'slotNumber', 'adType', 'adTitle']
-
-    for (const [key, value] of formData.entries()) {
-      if (metadataKeys.includes(key)) continue
-
-      // Check if it's a file
-      if (value instanceof File && value.size > 0) {
-        // Check if it's part of a multi-file upload
-        if (key.endsWith('_count')) continue
-
-        const match = key.match(/^(.+)_(\d+)$/)
-        if (match) {
-          // Multi-file upload: fieldName_0, fieldName_1, etc.
-          const fieldName = match[1]
-          if (!files[fieldName]) files[fieldName] = []
-          ;(files[fieldName] as File[]).push(value)
-        } else {
-          // Single file upload
-          files[key] = value
-        }
-      } else if (typeof value === 'string') {
-        // Regular form field
-        dynamicFields[key] = value
-      }
-    }
-
-    // Create unique submission ID for this slot
-    const sanitizedEmail = customerEmail.replace(/[^a-zA-Z0-9]/g, '_')
+    let fileUrls: any = {}
     const sanitizedItemId = itemId.replace(/[^a-zA-Z0-9]/g, '_')
-    const timestamp = Date.now()
-    const submissionId = `${sanitizedEmail}_${sanitizedItemId}_slot${slotNumber}_${timestamp}`
-
-    // Upload files to S3 with slot-specific path
     const s3Path = `submissions/${orderId}/${sanitizedItemId}/slot-${slotNumber}`
-    const fileUrls: any = {}
 
-    // Upload all files dynamically
-    for (const [fieldName, fileData] of Object.entries(files)) {
-      if (Array.isArray(fileData)) {
-        // Multiple files for this field
-        const urls: string[] = []
-        for (let i = 0; i < fileData.length; i++) {
-          const file = fileData[i]
+    if (preUploadedFileUrls) {
+      // Files were uploaded directly to S3 — just use the URLs
+      fileUrls = JSON.parse(preUploadedFileUrls)
+
+      for (const [key, value] of formData.entries()) {
+        if (metadataKeys.includes(key)) continue
+        if (typeof value === 'string') {
+          dynamicFields[key] = value
+        }
+      }
+    } else {
+      // Legacy fallback: files sent through the request body
+      const files: { [key: string]: File | File[] } = {}
+
+      for (const [key, value] of formData.entries()) {
+        if (metadataKeys.includes(key)) continue
+
+        if (value instanceof File && value.size > 0) {
+          if (key.endsWith('_count')) continue
+
+          const match = key.match(/^(.+)_(\d+)$/)
+          if (match) {
+            const fieldName = match[1]
+            if (!files[fieldName]) files[fieldName] = []
+            ;(files[fieldName] as File[]).push(value)
+          } else {
+            files[key] = value
+          }
+        } else if (typeof value === 'string') {
+          dynamicFields[key] = value
+        }
+      }
+
+      for (const [fieldName, fileData] of Object.entries(files)) {
+        if (Array.isArray(fileData)) {
+          const urls: string[] = []
+          for (let i = 0; i < fileData.length; i++) {
+            const file = fileData[i]
+            const buffer = Buffer.from(await file.arrayBuffer())
+            const fileKey = `${s3Path}/${fieldName}_${i}_${file.name}`
+
+            await s3.send(new PutObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: fileKey,
+              Body: buffer,
+              ContentType: file.type,
+            }))
+
+            urls.push(`https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`)
+          }
+          fileUrls[fieldName] = urls
+        } else {
+          const file = fileData
           const buffer = Buffer.from(await file.arrayBuffer())
-          const fileKey = `${s3Path}/${fieldName}_${i}_${file.name}`
+          const fileKey = `${s3Path}/${fieldName}_${file.name}`
 
           await s3.send(new PutObjectCommand({
             Bucket: BUCKET_NAME,
@@ -98,25 +115,15 @@ export async function POST(request: NextRequest) {
             ContentType: file.type,
           }))
 
-          urls.push(`https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`)
+          fileUrls[fieldName] = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`
         }
-        fileUrls[fieldName] = urls
-      } else {
-        // Single file
-        const file = fileData
-        const buffer = Buffer.from(await file.arrayBuffer())
-        const fileKey = `${s3Path}/${fieldName}_${file.name}`
-
-        await s3.send(new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: fileKey,
-          Body: buffer,
-          ContentType: file.type,
-        }))
-
-        fileUrls[fieldName] = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`
       }
     }
+
+    // Create unique submission ID for this slot
+    const sanitizedEmail = customerEmail.replace(/[^a-zA-Z0-9]/g, '_')
+    const timestamp = Date.now()
+    const submissionId = `${sanitizedEmail}_${sanitizedItemId}_slot${slotNumber}_${timestamp}`
 
     // Prepare submission data for DynamoDB
     const submissionData = {
@@ -131,9 +138,9 @@ export async function POST(request: NextRequest) {
       customerPhone,
       state,
       submittedAt: new Date().toISOString(),
-      status: 'pending', // Track submission status (pending, approved, published, etc.)
-      fieldData: dynamicFields, // Store all dynamic form fields
-      fileUrls, // Store all file URLs
+      status: 'pending',
+      fieldData: dynamicFields,
+      fileUrls,
     }
 
     // Save to DynamoDB submissions table
@@ -154,7 +161,7 @@ export async function POST(request: NextRequest) {
       ContentType: 'application/json',
     }))
 
-    console.log('✅ Slot submission saved:', {
+    console.log('Slot submission saved:', {
       orderId,
       itemId,
       slotNumber,
