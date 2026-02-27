@@ -3,7 +3,21 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, CheckCircle, AlertCircle, Upload } from 'lucide-react'
+import { Loader2, CheckCircle, AlertCircle, Upload, Zap } from 'lucide-react'
+import Link from 'next/link'
+
+interface AssignedBundle {
+  id: string
+  name: string
+  description?: string
+  state: string
+  items: { adType: string; title: string; quantity: number; unitPrice: number }[]
+  retailValue: number
+  totalPrice: number
+  accessToken: string
+  expiresAt?: string
+  createdAt: string
+}
 
 interface OrderItem {
   itemId: string
@@ -42,6 +56,7 @@ function AccountOrdersContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
+  const [assignedBundles, setAssignedBundles] = useState<AssignedBundle[]>([])
   const [loading, setLoading] = useState(true)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [showPaymentSuccessMessage, setShowPaymentSuccessMessage] = useState(false)
@@ -73,6 +88,7 @@ function AccountOrdersContent() {
     }
 
     fetchOrders()
+    fetchAssignedBundles()
   }, [isSignedIn, router, searchParams])
 
   const fetchOrders = async () => {
@@ -88,6 +104,18 @@ function AccountOrdersContent() {
       console.error('Error fetching orders:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAssignedBundles = async () => {
+    try {
+      const response = await fetch('/api/custom-bundles/assigned')
+      if (response.ok) {
+        const data = await response.json()
+        setAssignedBundles(data)
+      }
+    } catch (error) {
+      console.error('Error fetching assigned bundles:', error)
     }
   }
 
@@ -168,6 +196,63 @@ function AccountOrdersContent() {
             <p className="text-gray-300 text-sm">
               Your order has been placed. Please upload the required information for each item below.
             </p>
+          </div>
+        )}
+
+        {/* Pending Custom Bundles */}
+        {assignedBundles.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 tracking-wider flex items-center gap-3">
+              <Zap className="h-6 w-6 text-green-400" />
+              PENDING BUNDLES
+            </h2>
+            <div className="space-y-4">
+              {assignedBundles.map((bundle) => (
+                <div
+                  key={bundle.id}
+                  className="bg-gray-900 rounded-lg p-6 border-2 border-green-500/50"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{bundle.name}</h3>
+                      <p className="text-gray-400 text-sm">{bundle.state} Edition</p>
+                      {bundle.expiresAt && (
+                        <p className="text-yellow-400 text-xs mt-1">
+                          Expires {new Date(bundle.expiresAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-4 md:mt-0 text-right">
+                      <p className="text-gray-400 text-sm line-through">${bundle.retailValue.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-green-400">${bundle.totalPrice.toLocaleString()}</p>
+                      {bundle.retailValue > bundle.totalPrice && (
+                        <p className="text-green-300 text-xs">
+                          Save ${(bundle.retailValue - bundle.totalPrice).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    {bundle.items.map((item, index) => (
+                      <div key={index} className="bg-gray-800 p-3 rounded-md flex justify-between items-center">
+                        <span className="text-white text-sm">
+                          {item.title} {item.quantity > 1 && `x ${item.quantity}`}
+                        </span>
+                        <span className="text-gray-400 text-sm">${(item.unitPrice * item.quantity).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link
+                    href={`/bundle/${bundle.accessToken}`}
+                    className="inline-block bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full tracking-wider transition-colors"
+                  >
+                    PURCHASE NOW
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
