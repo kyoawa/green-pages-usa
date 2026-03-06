@@ -31,15 +31,6 @@ interface CustomBundle {
   expiresAt?: string
 }
 
-const adTypes = [
-  { value: 'single', label: 'Single Listing', price: 300 },
-  { value: 'banner', label: 'Digital Banner', price: 500 },
-  { value: 'quarter', label: '1/4 Page Ad', price: 800 },
-  { value: 'half', label: '1/2 Page Ad', price: 1500 },
-  { value: 'full', label: 'Full Page Ad', price: 3000 },
-  { value: 'belly', label: 'Backcover/Belly Band', price: 8000 },
-]
-
 const states = [
   { code: 'CA', name: 'California' },
   { code: 'MT', name: 'Montana' },
@@ -75,21 +66,58 @@ export default function CustomBundlesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [adTypes, setAdTypes] = useState<{ value: string; label: string; price: number }[]>([])
+  const [loadingAdTypes, setLoadingAdTypes] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
     description: '',
     state: 'CA',
-    items: [{ adType: 'single', quantity: 1 }] as { adType: string; quantity: number }[],
+    items: [{ adType: '', quantity: 1 }] as { adType: string; quantity: number }[],
     totalPrice: 0,
     deliveryMethod: 'link' as 'link' | 'account',
     assignedEmail: '',
     expiresAt: '',
   })
 
+  const fetchAdTypes = async (stateCode: string) => {
+    setLoadingAdTypes(true)
+    try {
+      const response = await fetch(`/api/inventory/${stateCode}`)
+      if (response.ok) {
+        const data = await response.json()
+        const types = data.map((item: any) => ({
+          value: item.id,
+          label: item.title,
+          price: item.price,
+        }))
+        setAdTypes(types)
+        // Set the first ad type as default for any items that don't have one
+        if (types.length > 0) {
+          setForm(prev => ({
+            ...prev,
+            items: prev.items.map(item => ({
+              ...item,
+              adType: item.adType && types.some((t: any) => t.value === item.adType) ? item.adType : types[0].value,
+            })),
+          }))
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching ad types:', err)
+    } finally {
+      setLoadingAdTypes(false)
+    }
+  }
+
   useEffect(() => {
     fetchBundles()
+    fetchAdTypes('CA')
   }, [])
+
+  useEffect(() => {
+    fetchAdTypes(form.state)
+  }, [form.state])
 
   const fetchBundles = async () => {
     try {
@@ -206,7 +234,7 @@ export default function CustomBundlesPage() {
       name: '',
       description: '',
       state: 'CA',
-      items: [{ adType: 'single', quantity: 1 }],
+      items: [{ adType: adTypes[0]?.value || '', quantity: 1 }],
       totalPrice: 0,
       deliveryMethod: 'link',
       assignedEmail: '',
@@ -218,7 +246,7 @@ export default function CustomBundlesPage() {
   }
 
   const addItem = () => {
-    setForm({ ...form, items: [...form.items, { adType: 'single', quantity: 1 }] })
+    setForm({ ...form, items: [...form.items, { adType: adTypes[0]?.value || '', quantity: 1 }] })
   }
 
   const removeItem = (index: number) => {
@@ -373,7 +401,7 @@ export default function CustomBundlesPage() {
 
             {/* Items */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ ...labelStyle, marginBottom: '8px' }}>Bundle Items *</label>
+              <label style={{ ...labelStyle, marginBottom: '8px' }}>Bundle Items *{loadingAdTypes && ' (loading ad types...)'}</label>
               {form.items.map((item, index) => {
                 const adType = adTypes.find(t => t.value === item.adType)
                 const lineTotal = (adType?.price || 0) * item.quantity
